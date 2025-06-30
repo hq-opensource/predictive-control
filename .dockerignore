@@ -1,0 +1,8 @@
+**/.venv
+**/__pycache__
+*.log
+.dockerignore
+.flake8
+.gitignore
+.gitlab-ci.yml
+Dockerfile

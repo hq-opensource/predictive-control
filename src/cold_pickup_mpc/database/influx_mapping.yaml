@@ -1,0 +1,142 @@
+# BUCKETS
+bucket_weather_cloud: "trois-rivieres"
+bucket_weather: "weather"
+bucket_user_data: "MEEB1"
+
+# Values energy meter
+net_power: 
+  bucket: "MEEB1"
+  measurement: "energy_meter"
+  field: "total_power"
+  tags: {}
+not_controllable_loads: 
+  bucket: "MEEB1"
+  measurement: "energy_meter"
+  field: "non_controllable_loads"
+  tags: {}
+
+# Values electric storage
+eb_net_power: 
+  bucket: "MEEB1"
+  measurement: "electric_battery"
+  field: "battery_power"
+  tags: {}
+eb_charge_power: 
+  bucket: "MEEB1"
+  measurement: "electric_battery"
+  field: "charge_power"
+  tags: {}
+eb_discharge_power: 
+  bucket: "MEEB1"
+  measurement: "electric_battery"
+  field: "discharge_power"
+  tags: {}
+eb_residual_energy_power: 
+  bucket: "MEEB1"
+  measurement: "electric_battery"
+  field: "residual_energy"
+  tags: {}
+eb_state_of_charge: 
+  bucket: "MEEB1"
+  measurement: "electric_battery"
+  field: "state_of_charge"
+  tags: {}
+
+# Values solar panels
+sp_produced_power: 
+  bucket: "MEEB1"
+  measurement: "solar_panel"
+  field: "sp_power"
+  tags: {}
+
+# Values electric chargers for vehicles
+ev_charger_net_power:
+  bucket: "MEEB1"
+  measurement: "electric_vehicle_v1g"
+  field: "power"
+  tags: {}
+
+# Values electric vehicles
+v1g_net_power:
+  bucket: "MEEB1"
+  measurement: "electric_vehicle_v1g"
+  field: "power"
+  tags: {}
+v1g_state_of_charge:
+  bucket: ""
+  measurement: ""
+  field: ""
+  tags: {}
+v2g_net_power:
+  bucket: ""
+  measurement: ""
+  field: ""
+  tags: {}
+v2g_state_of_charge:
+  bucket: ""
+  measurement: ""
+  field: ""
+  tags: {}
+
+# Values water heater
+wh_power: 
+  bucket: "MEEB1"
+  measurement: "water_heater"
+  field: "power"
+  tags: {}
+wh_temperature: 
+  bucket: "MEEB1"
+  measurement: "water_heater"
+  field: "temperature"
+  tags: {}
+wh_state:
+  bucket: "MEEB1"
+  measurement: "water_heater"
+  field: "state"
+  tags: {}
+
+# Values thermal storage
+ts_power: 
+  bucket: "MEEB1"
+  measurement: "thermal_storage"
+  field: "power"
+  tags: {}
+ts_temperature: 
+  bucket: "MEEB1"
+  measurement: "thermal_storage"
+  field: "temperature"
+  tags: {}
+ts_state_of_charge: 
+  bucket: "MEEB1"
+  measurement: "thermal_storage"
+  field: "state_of_charge"
+  tags: {}
+
+# Values space heating
+sh_power: 
+  bucket: "MEEB1"
+  measurement: "space_heating"
+  field: "power_" # prefix
+  tags: {}
+sh_setpoint:
+  bucket: "MEEB1"
+  measurement: "space_heating"
+  field: "setpoint_" # prefix
+  tags: {}
+sh_temperature:
+  bucket: "MEEB1"
+  measurement: "space_heating"
+  field: "temperature_" # prefix
+  tags: {}
+sh_occupation:
+  bucket: "MEEB1"
+  measurement: "space_heating"
+  field: "occupation_" # prefix
+  tags: {}
+
+# Weather values should build locally the measurement and take field as input
+temperature: 
+  bucket: "weather"
+  measurement: ""
+  field: ""
+  tags: {}
