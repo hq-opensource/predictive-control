@@ -1,3 +1,11 @@
+"""This module provides a collection of API client functions for retrieving various types of data.
+
+It serves as a centralized interface for fetching device information, device states,
+building consumption data, user preferences, historical data, and weather forecasts
+from the Core API. These functions are essential for gathering the necessary inputs
+for the Model Predictive Control (MPC) system.
+"""
+
 import os
 from datetime import datetime
 from typing import Any, Dict, Optional

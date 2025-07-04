@@ -1,3 +1,13 @@
+"""This module defines the BuildGlobalMPC class, responsible for constructing and solving the overall MPC problem.
+
+It integrates individual device-specific MPC formulations (from modules like
+`electric_storage_mpc`, `space_heating_mpc`, etc.) into a single, comprehensive
+optimization problem. This module handles the aggregation of objectives and
+constraints from various controllable devices, incorporates global factors
+like electricity prices and grid power limits, and manages the execution
+of the CVXPY solver to determine optimal dispatch strategies.
+"""
+
 import os
 from datetime import datetime
 from time import time

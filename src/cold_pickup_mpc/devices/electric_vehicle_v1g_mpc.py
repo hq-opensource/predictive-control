@@ -1,3 +1,12 @@
+"""This module defines the ElectricVehicleV1GMPC class, which models a V1G electric vehicle for MPC.
+
+It extends the abstract DeviceMPC class, providing a concrete implementation
+for formulating the optimization problem specific to unidirectional electric
+vehicle charging. This includes defining objectives related to maintaining a
+desired state of charge and incorporating constraints such as charging power
+limits, battery capacity, and the vehicle's connection status.
+"""
+
 from datetime import datetime
 from typing import Any, Dict, List, Tuple
 

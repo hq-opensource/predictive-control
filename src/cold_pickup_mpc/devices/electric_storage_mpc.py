@@ -1,3 +1,12 @@
+"""This module defines the ElectricStorageMPC class, which models an electric battery storage system for MPC.
+
+It extends the abstract DeviceMPC class, providing a concrete implementation
+for formulating the optimization problem specific to battery charging and
+discharging. This includes defining objectives related to maintaining a desired
+state of charge and incorporating constraints such as power limits and energy
+balance equations.
+"""
+
 from datetime import datetime
 from typing import Any, Dict, List, Tuple
 

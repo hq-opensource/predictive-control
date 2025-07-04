@@ -1,3 +1,12 @@
+"""This module defines the ElectricStorageDataRetriever class for fetching electric storage device data.
+
+It extends the abstract `DeviceRetriever` class, providing a concrete implementation
+for retrieving both static parameters and dynamic (time-series) data relevant to
+electric battery storage systems. This includes fetching initial state of charge (SoC)
+and SoC preference profiles from the Core API, which are crucial inputs for the
+electric storage MPC model.
+"""
+
 from datetime import datetime
 from typing import Any, Dict
 

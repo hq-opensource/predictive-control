@@ -1,3 +1,13 @@
+"""This module defines the SpaceHeatingDataRetriever class for fetching space heating device data.
+
+It extends the abstract `DeviceRetriever` class, providing a concrete implementation
+for retrieving both static parameters and dynamic (time-series) data relevant to
+space heating systems (e.g., smart thermostats). This includes fetching initial
+indoor temperatures, setpoint preferences, occupancy preferences, and weather
+forecasts from the Core API. It also integrates with the thermal model learning
+component to ensure the MPC has accurate thermal dynamics.
+"""
+
 from datetime import datetime, timedelta
 from typing import Any, Dict
 

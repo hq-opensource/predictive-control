@@ -1,3 +1,11 @@
+"""This module provides a centralized utility for configuring and managing application logging.
+
+It defines the `LoggingUtil` class, which offers a static method to retrieve
+pre-configured logger instances. This ensures consistent logging practices
+across the entire application, allowing for standardized log formats and
+dynamic adjustment of log levels via environment variables.
+"""
+
 import logging
 import os
 

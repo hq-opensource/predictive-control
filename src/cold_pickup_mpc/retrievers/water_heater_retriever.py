@@ -1,3 +1,12 @@
+"""This module defines the WaterHeaterDataRetriever class for fetching water heater device data.
+
+It extends the abstract `DeviceRetriever` class, providing a concrete implementation
+for retrieving both static parameters and dynamic (time-series) data relevant to
+electric water heaters. This includes fetching initial water temperature, hot water
+consumption preferences, and ambient temperature from the Core API, which are
+essential inputs for the water heater MPC model.
+"""
+
 from datetime import datetime
 from typing import Any, Dict
 

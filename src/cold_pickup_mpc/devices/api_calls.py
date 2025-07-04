@@ -1,3 +1,11 @@
+"""This module provides functions for interacting with the Core API to manage devices.
+
+It encapsulates various API calls related to device information, state retrieval,
+and control actions such as setting setpoints and schedules. These functions
+serve as the primary interface for the MPC system to communicate with and
+control physical devices connected via the Core API.
+"""
+
 import os
 from typing import Any, Dict
 

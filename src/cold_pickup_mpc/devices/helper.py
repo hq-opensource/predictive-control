@@ -1,3 +1,13 @@
+"""This module provides a utility class, DeviceHelper, for managing and categorizing devices.
+
+It defines an enumeration of standard device types used within the Cold Pickup MPC system,
+such as electric vehicles, electric storage, and space heating. Additionally, it offers
+static methods to perform common operations on device lists, including filtering devices
+by type or other keys, counting devices, and sorting them based on their assigned priorities.
+This helps in organizing and efficiently accessing device-related information throughout
+the application.
+"""
+
 from enum import Enum
 from typing import Any, Dict, List
 

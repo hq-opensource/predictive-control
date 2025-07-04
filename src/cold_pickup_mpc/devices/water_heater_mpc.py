@@ -1,3 +1,12 @@
+"""This module defines the WaterHeaterMPC class, which models an electric water heater for MPC.
+
+It extends the abstract DeviceMPC class, providing a concrete implementation
+for formulating the optimization problem specific to controlling a water heater.
+This includes defining objectives related to maintaining water temperature within
+a desired range and incorporating constraints such as power limits, tank volume,
+and thermal dynamics influenced by ambient temperature and water flow.
+"""
+
 from datetime import datetime
 from typing import Any, Dict, List, Tuple
 

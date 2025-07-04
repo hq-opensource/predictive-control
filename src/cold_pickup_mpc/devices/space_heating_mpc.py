@@ -1,3 +1,12 @@
+"""This module defines the SpaceHeatingMPC class, which models a space heating system for MPC.
+
+It extends the abstract DeviceMPC class, providing a concrete implementation
+for formulating the optimization problem specific to controlling electric heaters
+in thermal zones. This includes defining objectives related to maintaining
+indoor temperature within comfort bounds and incorporating constraints such as
+heater power limits and thermal dynamics based on a state-space model.
+"""
+
 from datetime import datetime
 from time import time
 from typing import Any, Dict, List, Tuple

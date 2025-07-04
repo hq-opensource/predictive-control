@@ -1,3 +1,13 @@
+"""This module implements the Real-Time Control (RTC) mechanism for enforcing power limits.
+
+It defines the `RealTimeControl` class, which operates as a separate thread to
+continuously monitor the total building power consumption. When consumption
+exceeds a predefined dynamic power limit, the RTC applies curtailment actions
+to controllable devices based on their priorities and a debounce mechanism to
+prevent rapid cycling. This module is critical for ensuring that the building's
+power consumption adheres to grid constraints in real-time.
+"""
+
 import os
 import threading
 import time

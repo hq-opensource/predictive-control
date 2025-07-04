@@ -1,3 +1,12 @@
+"""This module defines the ElectricVehicleV1gDataRetriever class for fetching V1G electric vehicle data.
+
+It extends the abstract `DeviceRetriever` class, providing a concrete implementation
+for retrieving both static parameters and dynamic (time-series) data relevant to
+unidirectional electric vehicle charging. This includes fetching initial state of
+charge (SoC), SoC preference profiles, and branched (connection) profiles from the
+Core API, which are essential inputs for the electric vehicle MPC model.
+"""
+
 from datetime import datetime
 from typing import Any, Dict
 

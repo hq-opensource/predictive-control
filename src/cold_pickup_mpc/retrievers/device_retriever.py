@@ -1,3 +1,12 @@
+"""This module defines the abstract base class for all device-specific data retrievers.
+
+It establishes a common interface (`DeviceRetriever`) for fetching both static
+properties and dynamic (time-series) data relevant to various controllable devices.
+Subclasses of `DeviceRetriever` are responsible for implementing the logic to
+retrieve data specific to their device types, ensuring that the Model Predictive
+Control (MPC) system has access to all necessary inputs for its optimization.
+"""
+
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, Dict, List, Type, TypeVar

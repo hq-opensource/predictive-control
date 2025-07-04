@@ -1,3 +1,12 @@
+"""This module defines the Interpreter class, responsible for processing and persisting MPC optimization results.
+
+It extracts optimal variable values from the solved CVXPY problem, transforms them
+into structured data (e.g., Pandas DataFrames), and handles their storage in a
+time-series database like InfluxDB. The Interpreter ensures that the complex
+outputs of the MPC solver are converted into actionable and storable insights,
+providing a clear view of the system's optimized behavior and control signals.
+"""
+
 """Module providing a class to interpret the results of the CVXPY Model Predictive Control optimization problem."""
 
 import os

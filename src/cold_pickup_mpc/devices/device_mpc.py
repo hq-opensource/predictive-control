@@ -1,3 +1,12 @@
+"""This module defines the abstract base class for all devices integrated into the MPC system.
+
+It establishes a common interface (`DeviceMPC`) that each controllable device
+must implement. This interface ensures that every device can provide its
+specific optimization formulation, including objective terms, constraints,
+and dispatch variables, allowing them to be seamlessly incorporated into
+a larger, aggregated Model Predictive Control problem.
+"""
+
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import List, Tuple

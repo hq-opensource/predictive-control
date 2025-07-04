@@ -1,3 +1,12 @@
+"""This module handles the Remote Procedure Call (RPC) communication for the MPC system.
+
+It sets up a Redis-based message broker using FastStream to listen for incoming
+MPC requests. The `handle_mpc_request` asynchronous function processes these
+requests, extracts relevant parameters, and then schedules the main MPC
+optimization and real-time control jobs. This module acts as the entry point
+for external systems to trigger MPC runs.
+"""
+
 from datetime import datetime
 from typing import Any, Dict
 

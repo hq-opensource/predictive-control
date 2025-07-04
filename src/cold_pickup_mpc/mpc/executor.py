@@ -1,3 +1,13 @@
+"""This module defines the ExecutorMPC class, which orchestrates the Model Predictive Control (MPC) process.
+
+It serves as the primary interface for initiating and running an MPC optimization cycle.
+The ExecutorMPC is responsible for:
+- Initializing the global MPC problem builder (`BuildGlobalMPC`).
+- Constructing the comprehensive optimization problem based on selected device types.
+- Solving the formulated MPC problem to determine optimal control actions.
+- Returning the solved problem and the resulting net grid power exchange.
+"""
+
 from datetime import datetime
 from typing import Dict, Tuple
 
