@@ -6,11 +6,37 @@ from cold_pickup_mpc.devices.api_calls import write_schedule
 
 
 def post_controls_schedule(controls: pd.DataFrame) -> None:
+    """Posts the generated control schedule to the Core API.
+
+    This function takes a Pandas DataFrame containing the optimal control
+    signals for various devices, converts it into a dictionary format
+    expected by the Core API, and then sends it using the `write_schedule`
+    API call.
+
+    Args:
+        controls: A Pandas DataFrame where the index represents timestamps
+                  and columns represent device/entity IDs, with values being
+                  the control signals (e.g., power setpoints).
+    """
     controls_dict = _convert_dataframe_to_dict(controls)
     write_schedule(controls_dict)
 
 
 def _convert_dataframe_to_dict(schedule: pd.DataFrame) -> Dict[str, Dict[str, float]]:
+    """Converts a Pandas DataFrame schedule into a nested dictionary format.
+
+    This helper function transforms a DataFrame, where columns are device IDs
+    and the index is timestamps, into a dictionary suitable for the Core API.
+    The output format is:
+    `{device_id: {iso_timestamp: value, ...}, ...}`
+
+    Args:
+        schedule: A Pandas DataFrame representing the control schedule.
+
+    Returns:
+        A nested dictionary where the outer keys are device IDs, and the inner
+        dictionaries map ISO-formatted timestamps to their corresponding control values.
+    """
     result_dict = {}
 
     # For each device/room, create a sub-dictionary with timestamps and dispatches

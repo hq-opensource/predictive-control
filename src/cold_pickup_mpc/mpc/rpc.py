@@ -5,7 +5,6 @@ from faststream.redis import RedisRouter
 
 from cold_pickup_mpc.util.logging import LoggingUtil
 
-
 logger = LoggingUtil.get_logger(__name__)
 logger.info("The MPC subscriber is starting at %s:", str(datetime.now().astimezone()))
 
@@ -20,9 +19,25 @@ mpc_router = RedisRouter(prefix=topic_prefix)
 
 @mpc_router.subscriber(function_name)
 async def handle_mpc_request(mpc_request: Dict[str, Any]) -> bool:
+    """Handles incoming MPC requests via Redis RPC.
+
+    This asynchronous function acts as a subscriber to the 'mpc' topic.
+    It receives MPC parameters, validates them, and then schedules the
+    main MPC and control jobs. If no parameters are provided, it
+    interprets this as a signal to stop the real-time control job.
+
+    Args:
+        mpc_request: A dictionary containing the MPC request, expected to have
+                     a 'params' key with detailed optimization parameters.
+
+    Returns:
+        True if the MPC and control jobs are successfully scheduled, False otherwise.
+    """
     params = mpc_request.get("params")
     if params is None:
-        logger.info("Received MPC request with NO parameters, stopping the Real-Time Control job")
+        logger.info(
+            "Received MPC request with NO parameters, stopping the Real-Time Control job"
+        )
         from cold_pickup_mpc.app import stop_realtime_control_job
 
         stop_realtime_control_job()
@@ -38,7 +53,9 @@ async def handle_mpc_request(mpc_request: Dict[str, Any]) -> bool:
     stop = datetime.fromisoformat(params["stop"])
     interval = int(params["interval"])
     prices = {datetime.fromisoformat(k): v for k, v in params["prices"].items()}
-    power_limit = {datetime.fromisoformat(k): v for k, v in params["power_limit"].items()}
+    power_limit = {
+        datetime.fromisoformat(k): v for k, v in params["power_limit"].items()
+    }
 
     from cold_pickup_mpc.app import schedule_mpc_and_control_jobs
 

@@ -8,12 +8,27 @@ from cold_pickup_mpc.retrievers.api_calls import (
 from cold_pickup_mpc.retrievers.device_retriever import DeviceRetriever
 from cold_pickup_mpc.util.logging import LoggingUtil
 
-
 logger = LoggingUtil.get_logger(__name__)
 
 
 class ElectricVehicleV1gDataRetriever(DeviceRetriever):
+    """A concrete implementation of DeviceRetriever for V1G electric vehicles.
+
+    This class specializes in retrieving both static parameters and dynamic
+    (time-series) data relevant to unidirectional electric vehicle charging.
+    It defines the default properties for V1G EVs and fetches their initial
+    state of charge, SoC preferences, and branched (connection) profiles from
+    the Core API.
+    """
+
     def _get_static_properties(self) -> Dict[str, Dict[str, Any]]:
+        """Defines the static properties specific to V1G electric vehicles.
+
+        Returns:
+            A dictionary specifying the name, type, and default value for each
+            static property of a V1G electric vehicle (e.g., energy capacity,
+            charging efficiency, min/max residual energy).
+        """
         static_properties: Dict[str, Dict[str, Any]] = {
             "priority": {"type": int, "default": 13},
             "critical_state": {"type": float, "default": 20.0},
@@ -35,6 +50,20 @@ class ElectricVehicleV1gDataRetriever(DeviceRetriever):
         return static_properties
 
     def _load_dynamic_data(self, start: datetime, stop: datetime) -> Dict[str, Any]:
+        """Loads dynamic (time-series) data for V1G electric vehicles.
+
+        This method fetches the initial state of charge (SoC), SoC preference
+        profiles, and branched (connection) profiles for each electric vehicle
+        from the Core API over the specified time range.
+
+        Args:
+            start: The start datetime for the dynamic data.
+            stop: The stop datetime for the dynamic data.
+
+        Returns:
+            A dictionary containing the initial SoC, SoC preferences, and
+            branched preferences for all configured electric vehicles.
+        """
         initial_state: Dict[str, Any] = {}
         soc_preferences: Dict[str, Any] = {}
         branched_preferences: Dict[str, Any] = {}
