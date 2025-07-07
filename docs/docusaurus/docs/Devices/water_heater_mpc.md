@@ -13,9 +13,9 @@ The water heater operates with continuous power control, allowing flexible power
 The MPC formulation for the water heater optimizes the power allocated to the device over a prediction horizon $T$, with time steps of duration $\Delta t$ (e.g., 10 minutes). The objective is to minimize the comfort penalty, defined as the squared deviation between the water temperature and a desired temperature, weighted by a user-defined priority. The power allocation cost is included in the overall MPC objective, while the comfort term is specific to the water heater.
 
 The comfort penalty is formulated as follows:
-```latex
+$$
 J_{WH,k} = P_{WH} \sum_{k=1}^{T} \left( \frac{X^{d}_{WH} - X^{WH}_{k}}{\Delta \alpha_{WH}} \right)^2
-```
+$$
 where:
 - $ P_{WH} $ is the priority weight for the water heater.
 - $ X^{d}_{WH} $ is the desired water temperature (constant over the horizon, e.g., 80°C).
@@ -23,9 +23,9 @@ where:
 - $ \Delta \alpha_{WH} $ is the normalization factor (e.g., 50 K).
 
 The temperature dynamics of the water heater are modeled as follows:
-```latex
+$$
 X^{WH}_{k+1} = X^{WH}_{k} + \frac{\Delta t}{C V} \left[ S^{WH}_{k} - C \dot{V}_{k} (X^{WH}_{k} - X_{\text{inlet}}) - 2 (X^{WH}_{k} - T_a) \right], \quad \forall k
-```
+$$
 where:
 - $ S^{WH}_{k} $ is the power allocated to the water heater at time $ k $.
 - $ C $ is the water heater constant (thermal capacity per unit volume, in Wh/°C/L).
@@ -37,25 +37,25 @@ where:
 
 Constraints ensure that the water heater operates within physical and operational limits:
 - **Temperature Limits**:
-```latex
+$$
 \underline{X}^{WH} \leq X^{WH}_{k} \leq \overline{X}^{WH}, \quad \forall k
-```
+$$
 where $ \underline{X}^{WH} $ and $ \overline{X}^{WH} $ are the minimum and maximum allowed temperatures (e.g., 30°C and 90°C).
 - **Power Limits**:
-```latex
+$$
 0 \leq S^{WH}_{k} \leq S^{WH,\max}, \quad \forall k
-```
+$$
 where $ S^{WH,\max} $ is the maximum power of the water heater (in W).
 - **Initial Condition**:
-```latex
+$$
 X^{WH}_{0} = X^{WH}_{\text{initial}}
-```
+$$
 where $ X^{WH}_{\text{initial}} $ is the initial water temperature.
 
 The power injection of the water heater, which contributes to the global power constraint, is simply:
-```latex
+$$
 S^{WH}_{k}, \quad \forall k
-```
+$$
 
 ### Justification of the Formulation
 

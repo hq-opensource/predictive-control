@@ -13,9 +13,9 @@ The formulation relies on a multi-zone thermal model that captures the interacti
 The heating MPC formulation optimizes the power allocated to baseboard heaters across $Z$ thermal zones over a prediction horizon $T$, with time steps of duration $\Delta t$ (e.g., 10 minutes). The objective minimizes a combination of the squared temperature deviations across all zones and the maximum absolute deviation in occupied zones, both weighted by priorities and occupancy status. The power allocation cost is included in the overall MPC objective, while the comfort term is specific to heating.
 
 The comfort penalty is formulated as follows:
-```latex
+$$
 J_{SH,k} = \sum_{z=1}^{Z} \sum_{k=1}^{T} P_{SH,z} O_{SH,z,k} \left( \frac{X^{d}_{SH,z,k} - X_{SH,z,k}}{\Delta \alpha_{SH}} \right)^2 + 100 \max_{z,k} \left( P_{SH,z} O_{SH,z,k} \left| \frac{X^{d}_{SH,z,k} - X_{SH,z,k}}{\Delta \alpha_{SH}} \right| \right)
-```
+$$
 where:
 - $ P_{SH,z} $ is the priority weight for thermal zone $ z $.
 - $ O_{SH,z,k} $ is the occupancy status (0 or 1) for zone $ z $ at time $ k $.
@@ -24,9 +24,9 @@ where:
 - $ \Delta \alpha_{SH} $ is the normalization factor (e.g., 10°C, generally the interval between minimum and maximum setpoints).
 
 The thermal dynamics of heating across all zones are modeled by:
-```latex
+$$
 X^{SH}_{k+1} = A_x X^{SH}_{k} + A_u S^{SH}_{k+1} + A_w W_{k+1}, \quad \forall k
-```
+$$
 where:
 - $ X^{SH}_{k} $ is the state vector of temperatures in all $ Z $ zones at time $ k $.
 - $ S^{SH}_{k} $ is the heating power vector applied to $ U $ heaters at time $ k $.
@@ -35,30 +35,30 @@ where:
 
 Constraints ensure that heating operates within physical and operational limits:
 - **Temperature Limits**:
-```latex
+$$
 \underline{X}^{SH}_z \leq X_{SH,z,k} \leq \overline{X}^{SH}_z, \quad \forall z, k
-```
+$$
 where $ \underline{X}^{SH}_z $ and $ \overline{X}^{SH}_z $ are the minimum and maximum temperature setpoints for zone $ z $.
 - **Power Limits**:
-```latex
+$$
 0 \leq S^{SH}_{u,k} \leq \frac{16.0}{U}, \quad \forall u, k
-```
+$$
 where $ S^{SH}_{u,k} $ is the power of baseboard heater $ u $ at time $ k $, and $ U $ is the total number of baseboard heaters, with a global limit of 16 kW distributed equally. 16 kW limit set for an average house in Quebec.
 - **Power Variation Constraints**:
-```latex
+$$
 | S^{SH}_{u,k} - S^{SH}_{u,k-1} | \leq 2.0, \quad \forall u, k \geq 1
-```
+$$
 to limit abrupt variations for operational stability.
 - **Initial Condition**:
-```latex
+$$
 X^{SH}_{0} = X^{SH}_{\text{initial}}
-```
+$$
 where $ X^{SH}_{\text{initial}} $ is the initial temperature vector for all zones.
 
 The power allocation for heating, which contributes to the global power constraint, is given by:
-```latex
+$$
 S^{SH}_{k} = \sum_{u=1}^{U} S^{SH}_{u,k}, \quad \forall k
-```
+$$
 
 ### Justification of the Formulation
 

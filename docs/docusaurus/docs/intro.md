@@ -2,15 +2,33 @@
 sidebar_position: 1
 ---
 
-# Cold Pickup MPC Package
+# Power Limit Package
 
-The `cold_pickup_mpc` package provides a hybrid control strategy combining Model Predictive Control (MPC) and Real-Time Control (RTC) to mitigate the Cold Load Pickup (CLPU) phenomenon in highly electrified buildings.
+The `power_limit` package provides a hybrid control strategy combining Model Predictive Control (MPC) and Real-Time Control (RTC) to limit the power consumption in highly electrified buildings. The `power_limit` package is part of a larger ecosystem as indicated on the figure.
 
-Its primary purpose is to manage the large, synchronized power demand that occurs after a power outage. Instead of relying on grid-side solutions, this package implements a user-centric approach, intelligently coordinating controllable devices (e.g., HVAC, water heaters, electric vehicles, batteries) to smooth the reconnection process while respecting grid limits and user preferences. The entire system is designed to be computationally efficient for deployment on low-power edge devices, such as a Home Energy Management System (HEMS).
+![Building Intelligence Diagram](/img/hems_predictive.png)
+
+The boxes in read are the grid services that could be executed using the `power_limit` package. Go to the following link to see the [**Building Intelligence**](https://github.com/hq-opensource/building-intelligence) package.
+
+# Objectives and Applications
+
+The `power_limit` package provides a robust and flexible control system designed to intelligently manage energy consumption in highly electrified buildings. While initially developed to address the challenges of **Cold Load Pickup (CLPU)**—the large, synchronized power demand that occurs after a power outage—its hybrid control strategy of Model Predictive Control (MPC) and Real-Time Control (RTC) extends its applicability to a wide range of energy management scenarios.
+
+Instead of relying solely on grid-side solutions, this package implements a user-centric approach, intelligently coordinating controllable devices (e.g., HVAC, water heaters, electric vehicles, batteries) to optimize energy usage while respecting grid limits and user preferences. The entire system is designed to be computationally efficient for deployment on low-power edge devices, such as a Home Energy Management System (HEMS).
 
 The hybrid strategy is twofold:
 1.  **Predictive Planning (MPC):** The MPC component proactively schedules device operation over a future horizon. It creates an optimal plan that minimizes energy costs and respects user comfort (e.g., temperature setpoints, battery state of charge targets), considering forecasts for weather and non-controllable loads.
 2.  **Reactive Supervision (RTC):** The RTC component acts as a high-frequency safeguard. It continuously monitors the building's total power consumption and, if it exceeds a predefined limit, curtails low-priority devices. This handles unforeseen consumption spikes not captured by the MPC's plan, ensuring strict adherence to power constraints.
+
+## Broader Applications
+
+The inherent sensitivity of the optimization formulations to energy prices (dynamic tariffs, hourly tariffs, retail energy market signals) and the flexible control mechanisms enable the `power_limit` package to be applied in various scenarios beyond CLPU:
+
+*   **General Demand Response (DR) Programs:** Facilitating participation in peak shaving, load shifting, and potentially ancillary services by optimizing consumption during high-demand or high-price periods.
+*   **Energy Cost Optimization for Consumers:** Maximizing savings under Time-of-Use (ToU) tariffs, Real-Time Pricing (RTP), or other dynamic pricing schemes by shifting loads to cheaper periods.
+*   **Integration with Distributed Energy Resources (DERs):** Optimizing the use of local generation (e.g., solar PV) through self-consumption strategies and intelligent battery energy management (charging/discharging based on prices and availability).
+*   **Grid Resilience and Stability:** Contributing to grid stability by managing congestion, providing voltage support, and enabling structured emergency load shedding.
+*   **Building Energy Efficiency and Sustainability:** Reducing the building's carbon footprint by aligning energy consumption with periods of higher renewable energy availability and promoting overall energy efficiency.
 
 ## Sub-packages
 

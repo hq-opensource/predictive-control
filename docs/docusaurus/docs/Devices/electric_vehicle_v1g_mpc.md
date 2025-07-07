@@ -13,9 +13,9 @@ The EV formulation uses a binary control variable to model the charging state (o
 The MPC formulation for the EV optimizes charging power over a prediction horizon $T$, with time steps of duration $\Delta t$ (e.g., 10 minutes). The objective is to minimize the comfort penalty, defined as the squared deviation between the measured residual energy and a desired residual energy, weighted by a user-defined priority. The power allocation cost is included in the overall MPC objective, while the comfort term is specific to the EV.
 
 The comfort penalty is formulated as follows:
-```latex
+$$
 J_{EV,k} = P_{EV} \sum_{k=1}^{T} \left( \frac{X^{d}_{EV} - X^{EV}_{k}}{\Delta \alpha_{EV}} \right)^2
-```
+$$
 where:
 - $ P_{EV} $ is the priority weight for the EV.
 - $ X^{d}_{EV} $ is the desired state of charge (constant, e.g., 90% of energy capacity).
@@ -23,9 +23,9 @@ where:
 - $ \Delta \alpha_{EV} $ is the normalization factor (typically the EV's energy capacity).
 
 The dynamics of the EV's state of charge are modeled as follows:
-```latex
+$$
 X^{EV}_{k+1} = \gamma X^{EV}_{k} + \eta_c S^{EV-C}_{k} \Delta t, \quad \forall k
-```
+$$
 where:
 - $ \gamma $ is the degradation factor representing self-discharge.
 - $ \eta_c $ is the charging efficiency.
@@ -33,9 +33,9 @@ where:
 - $ \Delta t $ is the duration of the time step (in hours).
 
 Charging power is controlled by a binary switch and EV availability:
-```latex
+$$
 S^{EV-C}_{k} = U^{EV}_{k} B_{k} S^{EV,\max}, \quad \forall k
-```
+$$
 where:
 - $ U^{EV}_{k} \in \{0, 1\} $ is the binary variable controlling the charging state at time $ k $.
 - $ B_{k} \in \{0, 1\} $ is the branched profile indicating EV availability (1 if connected, 0 otherwise).
@@ -43,30 +43,30 @@ where:
 
 Constraints ensure that the EV operates within its physical and operational limits:
 - **Residual Energy Limits**:
-```latex
+$$
 \underline{X}^{EV} \leq X^{EV}_{k} \leq \overline{X}^{EV}, \quad \forall k
-```
+$$
 where $ \underline{X}^{EV} $ and $ \overline{X}^{EV} $ are the minimum and maximum residual energies (e.g., 25% and 95% of energy capacity).
 - **Power Limits**:
-```latex
+$$
 0 \leq S^{EV-C}_{k} \leq S^{EV,\max}, \quad \forall k
-```
+$$
 where $ S^{EV,\max} $ is the maximum charging power.
 - **Initial Condition**:
-```latex
+$$
 X^{EV}_{0} = X^{EV}_{\text{initial}}
-```
+$$
 where $ X^{EV}_{\text{initial}} $ is the initial state of charge.
 - **Final SoC Requirement**:
-```latex
+$$
 X^{EV}_{T} \geq X^{EV}_{\text{final}}
-```
+$$
 where $ X^{EV}_{\text{final}} $ is the required state of charge at the end of the horizon.
 
 The power allocated to the EV, which contributes to the global power constraint, is:
-```latex
+$$
 S^{EV}_{k} = S^{EV-C}_{k}, \quad \forall k
-```
+$$
 
 ### Justification of the Formulation
 
