@@ -18,7 +18,7 @@ Instead of relying solely on grid-side solutions, this package implements a user
 
 The hybrid strategy is twofold:
 1.  **Predictive Planning (MPC):** The MPC component proactively schedules device operation over a future horizon. It creates an optimal plan that minimizes energy costs and respects user comfort (e.g., temperature setpoints, battery state of charge targets), considering forecasts for weather and non-controllable loads.
-2.  **Reactive Supervision (RTC):** The RTC component acts as a high-frequency safeguard. It continuously monitors the building's total power consumption and, if it exceeds a predefined limit, curtails low-priority devices. This handles unforeseen consumption spikes not captured by the MPC's plan, ensuring strict adherence to power constraints.
+2.  **Real-Time Control (RTC):** The RTC component acts as a high-frequency safeguard. It continuously monitors the building's total power consumption and, if it exceeds a predefined limit, curtails low-priority devices. This handles unforeseen consumption spikes not captured by the MPC's plan, ensuring strict adherence to power constraints.
 
 ## Broader Applications
 
