@@ -2,17 +2,49 @@
 sidebar_position: 1
 ---
 
-# Power Limit Package
+# Predictive Control
 
-The `power_limit` package provides a hybrid control strategy combining Model Predictive Control (MPC) and Real-Time Control (RTC) to limit the power consumption in highly electrified buildings. The `power_limit` package is part of a larger ecosystem as indicated on the figure.
+The `predictive_control` package provides a hybrid control strategy combining Model Predictive Control (MPC) and Real-Time Control (RTC) to intelligently manage energy in highly electrified buildings.
+
+## System Architecture
+
+This package is a key component within a larger **Building Intelligence** ecosystem, as illustrated in the architecture diagram below. It is designed to run as a service that consumes data from the central `Core API` of the Building Intelligence platform.
 
 ![Building Intelligence Diagram](/img/hems_predictive.png)
 
-The boxes in read are the grid services that could be executed using the `power_limit` package. Go to the following link to see the [**Building Intelligence**](https://github.com/hq-opensource/building-intelligence) package.
+The diagram shows three primary layers:
+1.  **Smart Devices:** The source of data from various building assets (e.g., HVAC, EV chargers) using protocols like Modbus and Bacnet.
+2.  **Building Intelligence Platform:** The core infrastructure (a separate software repository) that gathers, stores, and processes data, making it available via a `Core API`.
+3.  **Grid Services:** A set of applications that consume the API data to provide value-added services.
+
+The `predictive_control` package provides the implementation for the grid services highlighted in red: **CLPU - Predictive (MPC+RTC)** and **Dynamic Tariffs (MPC)**.
+
+The relationship can be simplified as follows:
+
+```mermaid
+graph TD
+    subgraph Building Intelligence Platform
+        A[Smart Devices Data] --> B(Event Broker)
+        B --> C{Core API}
+    end
+
+    subgraph Predictive Control Package (This Repository)
+        D(Retriever Modules) -- Fetches data --> C
+        D --> E(MPC & RTC Logic)
+        E -- Generates schedules --> F(Control Actions)
+    end
+
+    style D fill:#D5E8D4,stroke:#82B366,stroke-width:2px
+    style E fill:#D5E8D4,stroke:#82B366,stroke-width:2px
+    style F fill:#D5E8D4,stroke:#82B366,stroke-width:2px
+```
+
+If you want more information about the main platform, you can visit its [**Documentation**](https://hq-opensource.github.io/building-intelligence/) or [**GitHub Repository**](https://github.com/hq-opensource/building-intelligence).
+
 
 # Objectives and Applications
 
-The `power_limit` package provides a robust and flexible control system designed to intelligently manage energy consumption in highly electrified buildings. While initially developed to address the challenges of **Cold Load Pickup (CLPU)**—the large, synchronized power demand that occurs after a power outage—its hybrid control strategy of Model Predictive Control (MPC) and Real-Time Control (RTC) extends its applicability to a wide range of energy management scenarios.
+The `predictive_control` package provides a robust and flexible control system designed to intelligently manage energy consumption in highly electrified buildings. While initially developed to address the challenges of **Cold Load Pickup (CLPU)**—the large, synchronized power demand that occurs after a power outage—its hybrid control strategy of Model Predictive Control (MPC) and Real-Time Control (RTC) extends its applicability to a wide range of energy management scenarios.
 
 Instead of relying solely on grid-side solutions, this package implements a user-centric approach, intelligently coordinating controllable devices (e.g., HVAC, water heaters, electric vehicles, batteries) to optimize energy usage while respecting grid limits and user preferences. The entire system is designed to be computationally efficient for deployment on low-power edge devices, such as a Home Energy Management System (HEMS).
 
@@ -22,7 +54,7 @@ The hybrid strategy is twofold:
 
 ## Broader Applications
 
-The inherent sensitivity of the optimization formulations to energy prices (dynamic tariffs, hourly tariffs, retail energy market signals) and the flexible control mechanisms enable the `power_limit` package to be applied in various scenarios beyond CLPU:
+The inherent sensitivity of the optimization formulations to energy prices (dynamic tariffs, hourly tariffs, retail energy market signals) and the flexible control mechanisms enable the `predictive_control` package to be applied in various scenarios beyond CLPU:
 
 *   **General Demand Response (DR) Programs:** Facilitating participation in peak shaving, load shifting, and potentially ancillary services by optimizing consumption during high-demand or high-price periods.
 *   **Energy Cost Optimization for Consumers:** Maximizing savings under Time-of-Use (ToU) tariffs, Real-Time Pricing (RTP), or other dynamic pricing schemes by shifting loads to cheaper periods.
