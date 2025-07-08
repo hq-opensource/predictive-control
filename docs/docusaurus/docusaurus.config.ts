@@ -55,8 +55,8 @@ const config: Config = {
           sidebarPath: './sidebars.ts',
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/hq-opensource/predictive-control',
+          // editUrl:
+          //   'https://github.com/hq-opensource/predictive-control',
         },
         blog: {
           showReadingTime: true,
@@ -66,8 +66,8 @@ const config: Config = {
           },
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/hq-opensource/predictive-control',
+          // editUrl:
+          //   'https://github.com/hq-opensource/predictive-control',
           // Useful options to enforce blogging best practices
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
@@ -96,7 +96,7 @@ const config: Config = {
     navbar: {
       title: 'Home',
       logo: {
-        alt: 'Predictive',
+        alt: 'Predictive Logo',
         src: 'img/logo.svg',
       },
       items: [
