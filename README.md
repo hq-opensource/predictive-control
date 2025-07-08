@@ -5,7 +5,18 @@
 
 This repository contains the `predictive_control` Python package, which implements a robust and flexible hybrid control strategy combining Model Predictive Control (MPC) and Real-Time Control (RTC). Designed for intelligent energy management in highly electrified residential homes, this package optimizes energy consumption while ensuring strict adherence to grid limits and user preferences.
 
-This package is a key component within a larger [**Building Intelligence**](https://hq-opensource.github.io/building-intelligence/) ecosystem, consuming data from a central Core API to provide advanced grid services like Cold Load Pickup (CLPU) mitigation and Dynamic Tariff optimization.
+## System Architecture
+
+This package is a key component within a larger **Building Intelligence** ecosystem, as illustrated in the architecture diagram below. It is designed to run as a service that consumes data from the central `Core API` of the Building Intelligence platform.
+
+![Building Intelligence Diagram](docs/docusaurus/static/img/hems_predictive.png)
+
+The diagram shows three primary layers:
+1.  **Smart Devices:** The source of data from various building assets (e.g., HVAC, EV chargers) using protocols like Modbus and Bacnet.
+2.  **Building Intelligence Platform:** The core infrastructure (a separate software repository) that gathers, stores, and processes data, making it available via a `Core API`.
+3.  **Grid Services:** A set of applications that consume the API data to provide value-added services.
+
+The `predictive_control` package provides the implementation for the grid services highlighted in red: **CLPU - Predictive (MPC+RTC)** and **Dynamic Tariffs (MPC)**. If you want more information about the main platform, you can visit its [**Documentation**](https://hq-opensource.github.io/building-intelligence/) or [**GitHub Repository**](https://github.com/hq-opensource/building-intelligence).
 
 ---
 
