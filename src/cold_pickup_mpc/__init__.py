@@ -1,7 +1,7 @@
 """
 The `cold_pickup_mpc` package provides a hybrid control strategy combining
 Model Predictive Control (MPC) and Real-Time Control (RTC) to mitigate the
-Cold Load Pickup (CLPU) phenomenon in highly electrified buildings.
+Cold Load Pickup (CLPU) phenomenon in highly electrified residential homes.
 
 Its primary purpose is to manage the large, synchronized power demand that
 occurs after a power outage. Instead of relying on grid-side solutions, this

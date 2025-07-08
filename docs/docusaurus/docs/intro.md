@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Predictive Control
 
-The `predictive_control` package provides a hybrid control strategy combining Model Predictive Control (MPC) and Real-Time Control (RTC) to intelligently manage energy in highly electrified buildings.
+The `predictive_control` package provides a hybrid control strategy combining Model Predictive Control (MPC) and Real-Time Control (RTC) to intelligently manage energy in highly electrified residential homes.
 
 ## System Architecture
 
@@ -22,7 +22,7 @@ The `predictive_control` package provides the implementation for the grid servic
 
 # Objectives and Applications
 
-The `predictive_control` package provides a robust and flexible control system designed to intelligently manage energy consumption in highly electrified buildings. While initially developed to address the challenges of **Cold Load Pickup (CLPU)**—the large, synchronized power demand that occurs after a power outage—its hybrid control strategy of Model Predictive Control (MPC) and Real-Time Control (RTC) extends its applicability to a wide range of energy management scenarios.
+The `predictive_control` package provides a robust and flexible control system designed to intelligently manage energy consumption in highly electrified residential homes. While initially developed to address the challenges of **Cold Load Pickup (CLPU)**—the large, synchronized power demand that occurs after a power outage—its hybrid control strategy of Model Predictive Control (MPC) and Real-Time Control (RTC) extends its applicability to a wide range of energy management scenarios.
 
 Instead of relying solely on grid-side solutions, this package implements a user-centric approach, intelligently coordinating controllable devices (e.g., HVAC, water heaters, electric vehicles, batteries) to optimize energy usage while respecting grid limits and user preferences. The entire system is designed to be computationally efficient for deployment on low-power edge devices, such as a Home Energy Management System (HEMS).
 
