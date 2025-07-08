@@ -28,6 +28,7 @@ const config: Config = {
   organizationName: 'hq-opensource', // Usually your GitHub org/user name.
   projectName: 'predictive-control', // Usually your repo name.
   trailingSlash: false,
+  deploymentBranch: 'gh-pages',
   
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
