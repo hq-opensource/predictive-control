@@ -17,29 +17,7 @@ The diagram shows three primary layers:
 2.  **Building Intelligence Platform:** The core infrastructure (a separate software repository) that gathers, stores, and processes data, making it available via a `Core API`.
 3.  **Grid Services:** A set of applications that consume the API data to provide value-added services.
 
-The `predictive_control` package provides the implementation for the grid services highlighted in red: **CLPU - Predictive (MPC+RTC)** and **Dynamic Tariffs (MPC)**.
-
-The relationship can be simplified as follows:
-
-```mermaid
-graph TD
-    subgraph Building Intelligence Platform
-        A[Smart Devices Data] --> B(Event Broker)
-        B --> C{Core API}
-    end
-
-    subgraph Predictive Control Package (This Repository)
-        D(Retriever Modules) -- Fetches data --> C
-        D --> E(MPC & RTC Logic)
-        E -- Generates schedules --> F(Control Actions)
-    end
-
-    style D fill:#D5E8D4,stroke:#82B366,stroke-width:2px
-    style E fill:#D5E8D4,stroke:#82B366,stroke-width:2px
-    style F fill:#D5E8D4,stroke:#82B366,stroke-width:2px
-```
-
-If you want more information about the main platform, you can visit its [**Documentation**](https://hq-opensource.github.io/building-intelligence/) or [**GitHub Repository**](https://github.com/hq-opensource/building-intelligence).
+The `predictive_control` package provides the implementation for the grid services highlighted in red: **CLPU - Predictive (MPC+RTC)** and **Dynamic Tariffs (MPC)**. If you want more information about the main platform, you can visit its [**Documentation**](https://hq-opensource.github.io/building-intelligence/) or [**GitHub Repository**](https://github.com/hq-opensource/building-intelligence).
 
 
 # Objectives and Applications

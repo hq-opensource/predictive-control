@@ -11,32 +11,35 @@ type FeatureItem = {
 
 const FeatureList: FeatureItem[] = [
   {
-    title: 'Easy to Use',
-    Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
+    title: 'Hybrid Control Strategy (MPC + RTC)',
+    Svg: require('@site/static/img/control1.svg').default,
     description: (
       <>
-        Docusaurus was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
+        Combines Model Predictive Control for proactive energy planning with
+        Real-Time Control for immediate, reactive adjustments, ensuring both
+        optimal energy usage and strict adherence to power limits.
       </>
     ),
   },
   {
-    title: 'Focus on What Matters',
-    Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
+    title: 'Flexible Device Integration',
+    Svg: require('@site/static/img/devices.svg').default,
     description: (
       <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
-        ahead and move your docs into the <code>docs</code> directory.
+        Provides a standardized `DeviceMPC` interface for seamless integration
+        of various controllable devices (e.g., HVAC, water heaters, electric
+        vehicles, batteries), enabling modular and scalable energy management.
       </>
     ),
   },
   {
-    title: 'Powered by React',
-    Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
+    title: 'User-Centric Optimization',
+    Svg: require('@site/static/img/user.svg').default,
     description: (
       <>
-        Extend or customize your website layout by reusing React. Docusaurus can
-        be extended while reusing the same header and footer.
+        Balances energy cost minimization with user comfort by incorporating
+        dynamic pricing, prioritizing less critical devices during curtailment,
+        and utilizing thermal models for accurate predictions.
       </>
     ),
   },
