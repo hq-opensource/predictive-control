@@ -34,6 +34,7 @@ class ExecutorMPC:
         electric_storage: bool,
         electric_vehicle: bool,
         water_heater: bool,
+        photovoltaic_generator: bool,
     ) -> None:
         """Initializes the ExecutorMPC with flags indicating which device types to include.
 
@@ -42,15 +43,21 @@ class ExecutorMPC:
             electric_storage: A boolean indicating whether to include electric storage devices.
             electric_vehicle: A boolean indicating whether to include electric vehicle devices.
             water_heater: A boolean indicating whether to include water heater devices.
+            photovoltaic_generator: A boolean indicating whether to include photovoltaic generator devices.
         """
         self._space_heating = space_heating
         self._electric_storage = electric_storage
         self._electric_vehicle = electric_vehicle
         self._water_heater = water_heater
+        self._photovoltaic_generator = photovoltaic_generator
 
         # Create the BuildGlobalMPC object
         self._build_mpc = BuildGlobalMPC(
-            space_heating, electric_storage, electric_vehicle, water_heater
+            space_heating,
+            electric_storage,
+            electric_vehicle,
+            water_heater,
+            photovoltaic_generator,
         )
 
     def run_mpc(

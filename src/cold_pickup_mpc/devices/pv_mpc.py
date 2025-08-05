@@ -88,7 +88,7 @@ class PhotovoltaicGeneratorMPC(DeviceMPC):
 
         Args:
             devices: A list of dictionaries, where each dictionary contains the
-                     configuration and parameters of an electric storage device.
+            configuration and parameters of a photovoltaic generator.
         """
         self._pv_retriever = PhotovoltaicGeneratorDataRetriever(devices)
 

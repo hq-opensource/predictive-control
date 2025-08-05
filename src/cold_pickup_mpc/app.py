@@ -93,6 +93,7 @@ def _mpc_job(
 
     logger.info("MPC completed successfully")
 
+    # TODO: Juan, add the PV to the interpreter?
     interpreter = Interpreter(start, stop)
     controls = interpreter.interpret(
         global_mpc_problem,
@@ -217,11 +218,16 @@ def test_executor_mpc() -> None:
     space_heating = False
     electric_storage = False
     electric_vehicle = False
-    water_heater = True
+    water_heater = False
+    photovoltaic_generator = True
 
     # Create object
     executor_mpc = ExecutorMPC(
-        space_heating, electric_storage, electric_vehicle, water_heater
+        space_heating,
+        electric_storage,
+        electric_vehicle,
+        water_heater,
+        photovoltaic_generator,
     )
 
     # Time settings

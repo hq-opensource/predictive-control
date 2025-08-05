@@ -39,7 +39,7 @@ class ElectricStorageMPC(DeviceMPC):
 
         Args:
             devices: A list of dictionaries, where each dictionary contains the
-                     configuration and parameters of an electric storage device.
+            configuration and parameters of an electric storage device.
         """
         self._electric_storage_retriever = ElectricStorageDataRetriever(devices)
         print("")

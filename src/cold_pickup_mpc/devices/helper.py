@@ -28,7 +28,7 @@ class DeviceHelper(Enum):
     ELECTRIC_VEHICLE_V1G = "electric_vehicle_v1g"
     ELECTRIC_VEHICLE_V2G = "electric_vehicle_v2g"
     ELECTRIC_STORAGE = "electric_storage"
-    PHOTOVOLTAIC_GENERATOR_PVLIB = "photovoltaic_generator_pvlib"
+    PHOTOVOLTAIC_GENERATOR = "photovoltaic_generator"
     SPACE_HEATING = "space_heating"
     THERMAL_STORAGE = "thermal_storage"
     WATER_HEATER = "water_heater"
