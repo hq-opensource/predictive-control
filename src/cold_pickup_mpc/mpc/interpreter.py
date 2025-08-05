@@ -58,9 +58,16 @@ class Interpreter:
 
         This is the main method for processing the optimization output. It iterates
         through the enabled device types, extracts their respective control and
-        state variables from the solved `global_mpc_problem`, converts them into
-        Pandas DataFrames, and then saves these results to InfluxDB. It also
-        aggregates the control signals into a single DataFrame.
+        state variables from the solved `global_mpc_problem`, and then converts them into
+        Pandas DataFrames. It also aggregates the control signals into a single DataFrame.
+
+        Note:
+        This method saves the results directly on the InfluxDB isntance inside the Building Intelligence.
+        Saving on the InfluxDB is not mandatory. Moreover, all results should be saved using the CoreAPI.
+        However, the results are currently saved on InfluxDB for validation purposes.
+        The results are saved on InfluxDB to test their validity and correctness.
+        The process that saves the results on InfluxDB should be deleted after.
+
 
         Args:
             global_mpc_problem: The solved CVXPY Problem object.
@@ -100,9 +107,16 @@ class Interpreter:
             influxdb_mapping = yaml.safe_load(file)
 
         if space_heating:
-            results_space_heating, control_space_heating = (
-                self.load_space_heating_variables(global_mpc_problem, devices)
-            )
+            if global_mpc_problem.status in ["infeasible", "infeasible_inaccurate"]:
+                logger.warning(
+                    "Space heating optimization problem is infeasible. Skipping variable extraction."
+                )
+                results_space_heating = pd.DataFrame(index=date_range)
+                control_space_heating = pd.DataFrame(index=date_range)
+            else:
+                results_space_heating, control_space_heating = (
+                    self.load_space_heating_variables(global_mpc_problem, devices)
+                )
             # Create control
             controls = pd.concat([controls, control_space_heating], axis=1)
 
@@ -113,10 +127,38 @@ class Interpreter:
             self._save_results_to_influxdb(
                 data, bucket, DeviceHelper.SPACE_HEATING.value, write_api
             )
-        if electric_storage:
-            results_electric_storage, control_electric_storage = (
-                self.load_electric_storage_variables(global_mpc_problem, devices)
+        if electric_vehicle:
+            if global_mpc_problem.status in ["infeasible", "infeasible_inaccurate"]:
+                logger.warning(
+                    "Electric storage optimization problem is infeasible. Skipping variable extraction."
+                )
+                results_electric_vehicle = pd.DataFrame(index=date_range)
+                control_electric_vehicle = pd.DataFrame(index=date_range)
+            else:
+                results_electric_vehicle, control_electric_vehicle = (
+                    self.load_electric_vehicle_variables(global_mpc_problem, devices)
+                )
+            # Create control
+            controls = pd.concat([controls, control_electric_vehicle], axis=1)
+
+            # Save results to InfluxDB
+            measurement = influxdb_mapping["eb_net_power"]["measurement"]
+            data = self._convert_results_to_list(results_electric_vehicle, measurement)
+            bucket = influxdb_mapping["eb_net_power"]["bucket"]
+            self._save_results_to_influxdb(
+                data, bucket, DeviceHelper.ELECTRIC_VEHICLE.value, write_api
             )
+        if electric_storage:
+            if global_mpc_problem.status in ["infeasible", "infeasible_inaccurate"]:
+                logger.warning(
+                    "Electric storage optimization problem is infeasible. Skipping variable extraction."
+                )
+                results_electric_storage = pd.DataFrame(index=date_range)
+                control_electric_storage = pd.DataFrame(index=date_range)
+            else:
+                results_electric_storage, control_electric_storage = (
+                    self.load_electric_storage_variables(global_mpc_problem, devices)
+                )
             # Create control
             controls = pd.concat([controls, control_electric_storage], axis=1)
 
@@ -128,9 +170,17 @@ class Interpreter:
                 data, bucket, DeviceHelper.ELECTRIC_STORAGE.value, write_api
             )
         if water_heater:
-            results_water_heater, control_water_heater = (
-                self.load_water_heater_variables(global_mpc_problem, devices)
-            )
+            if global_mpc_problem.status in ["infeasible", "infeasible_inaccurate"]:
+                logger.warning(
+                    "Water heater optimization problem is infeasible. Skipping variable extraction."
+                )
+                # Initialize empty DataFrames to avoid errors in pd.concat
+                results_water_heater = pd.DataFrame(index=date_range)
+                control_water_heater = pd.DataFrame(index=date_range)
+            else:
+                results_water_heater, control_water_heater = (
+                    self.load_water_heater_variables(global_mpc_problem, devices)
+                )
             # Create control
             controls = pd.concat([controls, control_water_heater], axis=1)
 

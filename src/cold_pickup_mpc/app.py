@@ -282,8 +282,8 @@ def test_real_time_control(start_control: datetime) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    # main()
     # Uncomment the following line to run the test function
-    # test_executor_mpc()
+    test_executor_mpc()
     # start_control = datetime.fromisoformat("2025-05-20T14:41:00-04:00")
     # test_real_time_control(start_control)
