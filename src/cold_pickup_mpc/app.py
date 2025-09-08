@@ -231,8 +231,8 @@ def test_executor_mpc() -> None:
     )
 
     # Time settings
-    start_optimization = datetime.fromisoformat("2025-05-26T19:00:00-04:00")
-    stop_optimization = start_optimization + timedelta(hours=2)
+    start_optimization = datetime.fromisoformat("2025-09-08T19:00:00-04:00")
+    stop_optimization = start_optimization + timedelta(hours=3)
     interval = 10  # in minutes
 
     # Generate timestamps

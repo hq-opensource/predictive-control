@@ -1,7 +1,10 @@
 from datetime import datetime
 from typing import Any, Dict
 
+import requests
+
 from cold_pickup_mpc.retrievers.api_calls import (
+    get_solar_forecast,
     get_weather_forecast,
 )
 from cold_pickup_mpc.retrievers.device_retriever import DeviceRetriever
@@ -34,6 +37,7 @@ class PhotovoltaicGeneratorDataRetriever(DeviceRetriever):
             "pv_module": {"type": str, "default": "Canadian_Solar_Inc__CS6k_280M"},
             "modules_per_string": {"type": int, "default": 8},
             "strings_per_inverter": {"type": int, "default": 2},
+            "surface_tilt": {"type": int, "default": 45},
         }
 
         return static_properties
@@ -55,26 +59,58 @@ class PhotovoltaicGeneratorDataRetriever(DeviceRetriever):
             and ambient temperature for all configured photovoltaic generatorss.
         """
 
+        # Retrieve solar forecast
+        weather_forecast: Dict[str, Any] = {}
+        try:
+            weather_forecast["ghi"] = get_solar_forecast(
+                variable="clear_sky_ghi",
+                start=start,
+                stop=stop,
+            )
+        except requests.RequestException:
+            logger.error("Failed to retrieve solar forecast for ghi. Skipping.")
+        try:
+            weather_forecast["dni"] = get_solar_forecast(
+                variable="clear_sky_dni",
+                start=start,
+                stop=stop,
+            )
+        except requests.RequestException:
+            logger.error("Failed to retrieve solar forecast for dni. Skipping.")
+        try:
+            weather_forecast["dhi"] = get_solar_forecast(
+                variable="clear_sky_dhi",
+                start=start,
+                stop=stop,
+            )
+        except requests.RequestException:
+            logger.error("Failed to retrieve solar forecast for dhi. Skipping.")
+
         # Retrieve weather forecast
-        ghi = get_weather_forecast(
-            variable="ghi",
-            start=start,
-            stop=stop,
-        )
-        dni = get_weather_forecast(
-            variable="dni",
-            start=start,
-            stop=stop,
-        )
-        dhi = get_weather_forecast(
-            variable="dhi",
-            start=start,
-            stop=stop,
-        )
+        try:
+            # Retrieve temperature
+            temperature = get_weather_forecast(
+                variable="temperature",
+                start=start,
+                stop=stop,
+            )
+            weather_forecast["temperature"] = temperature
+        except requests.RequestException:
+            logger.error(
+                "Failed to retrieve weather forecast for temperature. Skipping."
+            )
 
-        data: Dict[str, Any] = {}
-        data["ghi"] = ghi
-        data["dni"] = dni
-        data["dhi"] = dhi
+        try:
+            # Retrieve wind speed
+            wind_speed = get_weather_forecast(
+                variable="windSpeed",
+                start=start,
+                stop=stop,
+            )
+            weather_forecast["wind_speed"] = wind_speed
+        except requests.RequestException:
+            logger.error(
+                "Failed to retrieve weather forecast for wind speed. Skipping."
+            )
 
-        return data
+        return weather_forecast

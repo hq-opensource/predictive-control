@@ -139,8 +139,9 @@ class BuildGlobalMPC:
         )  # Ceiling to get the upper integer
 
         # Load the non controllable loads, power limit and price profile
-        # TODO: Juan, here you should add a binary variable to consider or not the PV generation?
-        # TODO: Juan, validate here if the pv generation should be always included or not.
+        # TODO: Juan, will PV always be included?
+        # TODO: Juan, what is happening here with the price?
+        # TODO: Juan, Verify the price and what is happening here
         price_profile, power_limit_array, non_controllable_loads = (
             self._validate_global_inputs(
                 start, stop, price_profile, power_limit, steps_horizon_k

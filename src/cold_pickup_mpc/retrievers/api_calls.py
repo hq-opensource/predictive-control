@@ -18,6 +18,57 @@ from cold_pickup_mpc.util.logging import LoggingUtil
 logger = LoggingUtil.get_logger(__name__)
 
 
+def get_solar_forecast(
+    variable: str, start: datetime, stop: datetime
+) -> Dict[str, Any]:
+    """Retrieves solar forecast data from the Core API's solar endpoint.
+
+    This function fetches predicted solar irradiation data (GHI, DNI, DHI)
+    for a specified variable within a given future time range.
+
+    Args:
+        variable: The solar variable to retrieve (e.g., "clear_sky_ghi").
+                  Refer to the Core API documentation for a full list.
+        start: The start timestamp of the desired forecast period (timezone-aware).
+        stop: The stop timestamp of the desired forecast period (timezone-aware).
+
+    Returns:
+        A dictionary mapping string timestamps to float values representing the
+        solar forecast data, as defined by the Core API.
+        Example: {"2025-09-05 15:20:00-04:00": 589.98, ...}
+
+    Raises:
+        requests.exceptions.RequestException: If the API call fails due to network issues,
+                                            invalid response, or HTTP errors.
+    """
+    # Construct the URL using the environment variable for the base URL
+    # and the new solar forecast path.
+    api_url = f"{os.getenv('CORE_API_URL')}/data/solar/forecast/{variable}"
+
+    # Prepare the query parameters with ISO 8601 formatted timestamps.
+    params = {
+        "start": start.isoformat(),
+        "stop": stop.isoformat(),
+    }
+
+    logger.debug("Requesting solar forecast from %s with params: %s", api_url, params)
+
+    try:
+        # Make the GET request with a 30-second timeout.
+        response = requests.get(api_url, params=params, timeout=30)
+        # Raise an exception for bad status codes (4xx or 5xx).
+        response.raise_for_status()
+
+        # Parse the JSON response.
+        solar_data = response.json()
+        logger.debug("Solar forecast data retrieved successfully for '%s'.", variable)
+        return solar_data
+    except requests.RequestException as e:
+        logger.error("Failed to retrieve solar forecast data: %s", e)
+        # Re-raise the exception to be handled by the caller.
+        raise
+
+
 def get_devices() -> Dict[str, Any]:
     """Retrieves the installed devices from the Core API.
 
