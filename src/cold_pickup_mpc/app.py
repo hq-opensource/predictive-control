@@ -231,13 +231,15 @@ def test_executor_mpc() -> None:
     )
 
     # Time settings
-    start_optimization = datetime.fromisoformat("2025-09-08T19:00:00-04:00")
-    stop_optimization = start_optimization + timedelta(hours=3)
+    optimization_hours = 3
+    start_optimization = datetime.fromisoformat("2025-09-09T19:00:00-04:00")
+    stop_optimization = start_optimization + timedelta(hours=optimization_hours)
     interval = 10  # in minutes
 
     # Generate timestamps
     timestamps = [
-        start_optimization + timedelta(minutes=i) for i in range(0, 120 + 1, interval)
+        start_optimization + timedelta(minutes=i)
+        for i in range(0, optimization_hours * 60 + 1, interval)
     ]
 
     # Example: Generate dummy values
@@ -250,6 +252,9 @@ def test_executor_mpc() -> None:
     )
 
     # Create the interpreter to read results
+    # TODO: Impossible to add the PV here. If we want the results,
+    # we should add an influx call directly inside the function that computes the dispatch.
+    # Not elegant but it will work for now.
     interpreter = Interpreter(start_optimization, stop_optimization)
     controls = interpreter.interpret(
         global_mpc_problem,

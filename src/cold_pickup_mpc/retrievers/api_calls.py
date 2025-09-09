@@ -326,7 +326,7 @@ def get_non_controllable_loads_forecast(
     }
 
     try:
-        response = requests.get(api_url, params=params, timeout=30)
+        response = requests.get(api_url, params=params, timeout=60)
         response.raise_for_status()
         forecast_data = response.json()
         logger.debug(

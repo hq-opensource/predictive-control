@@ -139,10 +139,7 @@ class BuildGlobalMPC:
         )  # Ceiling to get the upper integer
 
         # Load the non controllable loads, power limit and price profile
-        # TODO: Juan, will PV always be included?
-        # TODO: Juan, what is happening here with the price?
-        # TODO: Juan, Verify the price and what is happening here
-        price_profile, power_limit_array, non_controllable_loads = (
+        price_profile_array, power_limit_array, non_controllable_loads_array = (
             self._validate_global_inputs(
                 start, stop, price_profile, power_limit, steps_horizon_k
             )
@@ -171,13 +168,15 @@ class BuildGlobalMPC:
 
         # Create a optimization parameter for the price
         price_parameter = cvx.Parameter(
-            (1, price_profile.shape[1]), name="price", nonneg=True
+            (1, price_profile_array.shape[1]), name="price", nonneg=True
         )
-        price_parameter.value = price_profile
+        price_parameter.value = price_profile_array
 
         # Compute the energy balance
+        # TODO: Juan, the forecast of the non-controllable loads is giving negative values!
+        # TODO: Juan, verify the forecast of the non-controllable loads!
         aggregated_dispatch = cvx.sum(dispatch_devices, axis=0)
-        net_grid_power_exchange = aggregated_dispatch + non_controllable_loads
+        net_grid_power_exchange = aggregated_dispatch + non_controllable_loads_array
 
         # Define MPC objective
         global_mpc_objective = 0
@@ -191,8 +190,16 @@ class BuildGlobalMPC:
             constraints_devices
         )  # Add the constraints of the devices
 
-        # Add constraint for the available power
-        global_mpc_constraints.append(net_grid_power_exchange <= power_limit_array)
+        # Add constraint for the available power limit
+        if isinstance(net_grid_power_exchange, np.ndarray):
+            logger.warning(
+                "There are no controllable devices. This situation arises normally when there is only PV."
+            )
+            logger.warning(
+                "Because there is only PV, there is no possibility of limiting the power under certain value."
+            )
+        else:
+            global_mpc_constraints.append(net_grid_power_exchange <= power_limit_array)
 
         # Build the optimization problem
         global_mpc_problem = cvx.Problem(
@@ -259,6 +266,8 @@ class BuildGlobalMPC:
                 logger.error("Start dates of inputs do not match.")
             else:
                 logger.debug("Start dates of inputs match.")
+
+                # Compute non controllable loads
                 non_controllable_loads_flat = np.array(
                     list(non_controllable_loads["forecast"].values())
                 )[0:steps_horizon_k]

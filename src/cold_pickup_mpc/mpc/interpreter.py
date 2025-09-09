@@ -75,6 +75,7 @@ class Interpreter:
             electric_storage: A boolean indicating if electric storage devices were included.
             electric_vehicle: A boolean indicating if electric vehicle devices were included.
             water_heater: A boolean indicating if water heater devices were included.
+            photovoltaic_generator: A boolean indicating if the photovoltaic generator device was included.
 
         Returns:
             A Pandas DataFrame containing the aggregated control signals for all
@@ -106,6 +107,7 @@ class Interpreter:
         with open(mapping_path, "r") as file:
             influxdb_mapping = yaml.safe_load(file)
 
+        # Evaluate and save results for the space heating system
         if space_heating:
             if global_mpc_problem.status in ["infeasible", "infeasible_inaccurate"]:
                 logger.warning(
@@ -127,6 +129,8 @@ class Interpreter:
             self._save_results_to_influxdb(
                 data, bucket, DeviceHelper.SPACE_HEATING.value, write_api
             )
+
+        # Evaluate and save results for the electric vehicle
         if electric_vehicle:
             if global_mpc_problem.status in ["infeasible", "infeasible_inaccurate"]:
                 logger.warning(
@@ -148,6 +152,8 @@ class Interpreter:
             self._save_results_to_influxdb(
                 data, bucket, DeviceHelper.ELECTRIC_VEHICLE.value, write_api
             )
+
+        # Evaluate and save results for the electric storage
         if electric_storage:
             if global_mpc_problem.status in ["infeasible", "infeasible_inaccurate"]:
                 logger.warning(
@@ -169,6 +175,8 @@ class Interpreter:
             self._save_results_to_influxdb(
                 data, bucket, DeviceHelper.ELECTRIC_STORAGE.value, write_api
             )
+
+        # Evaluate and save results for the water heater
         if water_heater:
             if global_mpc_problem.status in ["infeasible", "infeasible_inaccurate"]:
                 logger.warning(
@@ -502,9 +510,3 @@ class Interpreter:
             data=data, columns=columns, index=date_range
         )
         return results_space_heating, control_space_heating
-
-    def save_results_to_influxdb(self, results: pd.DataFrame) -> None:
-        """Saves the results to InfluxDB."""
-        # This method is not used in the current implementation, as saving is handled
-        # within the `interpret` method for each device type.
-        pass

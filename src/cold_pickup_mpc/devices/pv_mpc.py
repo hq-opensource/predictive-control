@@ -155,7 +155,7 @@ class PhotovoltaicGeneratorMPC(DeviceMPC):
         pv_production = pv_system.results.ac.fillna(0) / 1000  # convert W to kW
 
         # Build the dispatch (dispatch is already negative, because it produces energy)
-        pv_dispatch = np.array([pv_production.values])
+        pv_dispatch = np.array([pv_production.values])[:, 0:steps_horizon_k]
 
         return pv_dispatch
 
