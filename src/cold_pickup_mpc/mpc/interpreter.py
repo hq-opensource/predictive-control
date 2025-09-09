@@ -124,9 +124,9 @@ class Interpreter:
 
             # Save results to InfluxDB
             measurement = influxdb_mapping["sh_power"]["measurement"]
-            data = self._convert_results_to_list(results_space_heating, measurement)
+            data = self.convert_results_to_list(results_space_heating, measurement)
             bucket = influxdb_mapping["sh_power"]["bucket"]
-            self._save_results_to_influxdb(
+            self.save_results_to_influxdb(
                 data, bucket, DeviceHelper.SPACE_HEATING.value, write_api
             )
 
@@ -147,9 +147,9 @@ class Interpreter:
 
             # Save results to InfluxDB
             measurement = influxdb_mapping["eb_net_power"]["measurement"]
-            data = self._convert_results_to_list(results_electric_vehicle, measurement)
+            data = self.convert_results_to_list(results_electric_vehicle, measurement)
             bucket = influxdb_mapping["eb_net_power"]["bucket"]
-            self._save_results_to_influxdb(
+            self.save_results_to_influxdb(
                 data, bucket, DeviceHelper.ELECTRIC_VEHICLE.value, write_api
             )
 
@@ -170,9 +170,9 @@ class Interpreter:
 
             # Save results to InfluxDB
             measurement = influxdb_mapping["eb_net_power"]["measurement"]
-            data = self._convert_results_to_list(results_electric_storage, measurement)
+            data = self.convert_results_to_list(results_electric_storage, measurement)
             bucket = influxdb_mapping["eb_net_power"]["bucket"]
-            self._save_results_to_influxdb(
+            self.save_results_to_influxdb(
                 data, bucket, DeviceHelper.ELECTRIC_STORAGE.value, write_api
             )
 
@@ -194,15 +194,15 @@ class Interpreter:
 
             # Save results to InfluxDB
             measurement = influxdb_mapping["wh_power"]["measurement"]
-            data = self._convert_results_to_list(results_water_heater, measurement)
+            data = self.convert_results_to_list(results_water_heater, measurement)
             bucket = influxdb_mapping["wh_power"]["bucket"]
-            self._save_results_to_influxdb(
+            self.save_results_to_influxdb(
                 data, bucket, DeviceHelper.WATER_HEATER.value, write_api
             )
 
         return controls
 
-    def _convert_results_to_list(self, results: pd.DataFrame, measurement: str) -> List:
+    def convert_results_to_list(self, results: pd.DataFrame, measurement: str) -> List:
         """Converts a Pandas DataFrame of optimization results into a list of dictionaries.
 
         This format is suitable for writing data to InfluxDB. Each row in the DataFrame
@@ -230,7 +230,7 @@ class Interpreter:
                     )
         return data
 
-    def _save_results_to_influxdb(
+    def save_results_to_influxdb(
         self, data: List, bucket: str, device_type: str, write_api: WriteApi
     ) -> None:
         """Saves a list of data points to InfluxDB.

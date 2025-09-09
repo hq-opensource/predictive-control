@@ -252,9 +252,6 @@ def test_executor_mpc() -> None:
     )
 
     # Create the interpreter to read results
-    # TODO: Impossible to add the PV here. If we want the results,
-    # we should add an influx call directly inside the function that computes the dispatch.
-    # Not elegant but it will work for now.
     interpreter = Interpreter(start_optimization, stop_optimization)
     controls = interpreter.interpret(
         global_mpc_problem,

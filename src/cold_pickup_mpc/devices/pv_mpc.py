@@ -5,8 +5,12 @@ from typing import Any, Dict, List, Tuple
 import numpy as np
 import pandas as pd
 import pvlib
+from influxdb_client import InfluxDBClient
+from influxdb_client.client.write_api import SYNCHRONOUS
 
 from cold_pickup_mpc.devices.device_mpc import DeviceMPC
+from cold_pickup_mpc.devices.helper import DeviceHelper
+from cold_pickup_mpc.mpc.interpreter import Interpreter
 from cold_pickup_mpc.retrievers.pv_retriever import (
     PhotovoltaicGeneratorDataRetriever,
 )
@@ -156,6 +160,39 @@ class PhotovoltaicGeneratorMPC(DeviceMPC):
 
         # Build the dispatch (dispatch is already negative, because it produces energy)
         pv_dispatch = np.array([pv_production.values])[:, 0:steps_horizon_k]
+
+        # Save on InfluxDB.
+        # THIS IS JUST FOR TESTING, SHOULD BE REMOVED LATER!!!
+        try:
+            timestamps = weather_forecasts.index.tolist()
+            interpreter = Interpreter(start, stop)
+            generation_to_save = []
+            for point in range(len(pv_dispatch[0, :])):
+                value_point = {
+                    "measurement": "photovoltaic_generator",
+                    "tags": {"_type": "mpc_results"},
+                    "time": timestamps[point],
+                    "fields": {"power": float(pv_dispatch[0, point])},
+                }
+                generation_to_save.append(value_point)
+
+            url = os.getenv("INFLUXDB_URL")
+            org = os.getenv("INFLUXDB_ORG")
+            token = os.getenv("INFLUXDB_TOKEN")
+            influxdb_client = InfluxDBClient(
+                url=url, token=token, org=org, timeout=30000
+            )
+            write_api = influxdb_client.write_api(write_options=SYNCHRONOUS)
+
+            interpreter.save_results_to_influxdb(
+                data=generation_to_save,
+                bucket="MEEB1",
+                device_type=DeviceHelper.PHOTOVOLTAIC_GENERATOR.value,
+                write_api=write_api,
+            )
+        except Exception as e:
+            # Log the error, but do not re-raise as this is for testing purposes
+            print(f"Error saving PV generation to InfluxDB (testing only): {e}")
 
         return pv_dispatch
 
