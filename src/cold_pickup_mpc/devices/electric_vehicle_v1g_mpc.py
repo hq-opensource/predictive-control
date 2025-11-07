@@ -25,9 +25,10 @@ class ElectricVehicleV1GMPC(DeviceMPC):
 
     This class models an electric vehicle that can only draw power from the grid
     (V1G - Vehicle-to-Grid unidirectional). It formulates an optimization problem
-    to control the EV's charging schedule based on its availability (i.e., when it
-    is plugged in) and charging preferences, while respecting the vehicle's
-    battery constraints.
+    to control the EV's charging schedule with continuous power modulation based on 
+    its availability (i.e., when it is plugged in) and charging preferences, while 
+    respecting the vehicle's battery constraints. The control uses a continuous 
+    variable (0-1) allowing for precise power adjustment rather than simple on/off control.
     """
 
     def __init__(
@@ -56,6 +57,12 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         self._decay_factor = float(
             device_dict.get("decay_factor", 0.99)
         )  # Optional, default 1
+        self._max_power_ramp_rate = float(
+            device_dict.get("max_power_ramp_rate", 0.2)
+        )  # Maximum change in switch variable per time step (default 20%/step)
+        self._enable_ramping = bool(
+            device_dict.get("enable_ramping", True)
+        )  # Enable/disable power ramping constraints
 
     def create_mpc_formulation(
         self,
@@ -67,13 +74,15 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         """Creates the optimization formulation for the V1G electric vehicle.
 
         This method builds a CVXPY optimization problem that determines the optimal
-        charging schedule for the EV. The objective is to minimize the deviation
-        from a desired state of charge. The model includes constraints for:
+        charging schedule for the EV with continuous power control. The objective is to 
+        minimize the deviation from a desired state of charge. The model includes constraints for:
         - SoC limits (min and max).
-        - Charging power limits.
+        - Continuous charging power control (0-100% of max power).
+        - Optional power ramping constraints for smoother transitions.
         - The EV's connection status (it can only charge when plugged in, as
           indicated by the `branched_profile`).
         - The energy balance equation for the battery.
+        - Enhanced input validation and error handling.
 
         Args:
             start: The start time of the optimization horizon.
@@ -93,6 +102,10 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         # Create external variables
         initial_state = v1g_info["initial_state"]
         branched_profile = v1g_info["branched_profile"]
+
+        logger.debug(f"Creating EV MPC formulation: {start} to {stop}, interval={interval}min")
+        logger.debug(f"EV parameters: capacity={self._energy_capacity}Wh, power={self._power_capacity}W")
+        logger.debug(f"Ramping enabled: {self._enable_ramping}, max_ramp_rate: {self._max_power_ramp_rate}")
 
         # Define simulation values
         # Validate input timestamps
@@ -114,12 +127,18 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         # Validate inputs
         branched = branched_profile.to_numpy().flatten()
         if len(branched) != steps_horizon_k:
+            logger.error(f"branched_profile length {len(branched)} does not match time horizon {steps_horizon_k}")
             raise ValueError("branched_profile length must match time horizon.")
         if not np.all(np.isin(branched, [0, 1])):
+            logger.error("branched_profile contains invalid values (must be 0 or 1)")
             raise ValueError("branched_profile must contain only 0s and 1s.")
         init_val = initial_state.to_numpy().flatten()
         if init_val.size != 1:
+            logger.error(f"initial_state has {init_val.size} values, expected 1")
             raise ValueError("initial_state must be a single value.")
+        if init_val[0] < 0 or init_val[0] > self._energy_capacity:
+            logger.error(f"initial_state {init_val[0]} is outside valid range [0, {self._energy_capacity}]")
+            raise ValueError(f"initial_state must be between 0 and {self._energy_capacity} Wh.")
 
         # Define optimization variables
         charge_power = cvx.Variable(
@@ -149,6 +168,20 @@ class ElectricVehicleV1GMPC(DeviceMPC):
 
         # Define constraints
         constraints: List = []
+
+        # Switch bounds (continuous control between 0 and 1)
+        constraints.append(switch <= 1.0)
+
+        # Power ramping constraints (optional, for smoother power transitions)
+        if self._enable_ramping and steps_horizon_k > 1:
+            # Limit the rate of change in the switch variable
+            for k in range(steps_horizon_k - 1):
+                constraints.append(
+                    switch[k + 1] - switch[k] <= self._max_power_ramp_rate
+                )
+                constraints.append(
+                    switch[k] - switch[k + 1] <= self._max_power_ramp_rate
+                )
 
         # State constraints
         constraints.append(
