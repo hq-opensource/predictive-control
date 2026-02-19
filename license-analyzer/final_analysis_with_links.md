@@ -49,6 +49,6 @@
 - [rehype-katex (Node.js)](https://github.com/kwshi/rehype-katex-svelte>)
 - [remark-math (Node.js)](https://github.com/remarkjs/remark-math)
 
-### Python Software Foundation License Version 2 (PSF-2
+### Python Software Foundation License Version 2 PSF-2
 - [python (Python)](https://github.com/python/cpython)
 
