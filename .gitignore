@@ -14,9 +14,16 @@
 .history
 custom_compose.yaml
 databases_compose.yaml
+# Environmental variables
+.env
+.env.*
+!.env.example
 local-dev.env
 docker.env
 devices.yaml
 lnbits.yaml
 influxdb_mapping.yaml
 custom
+node_modules/
+__pycache__/
+*.pyc
