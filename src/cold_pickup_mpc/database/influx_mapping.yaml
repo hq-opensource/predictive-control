@@ -134,6 +134,14 @@ sh_occupation:
   field: "occupation_" # prefix
   tags: {}
 
+# Values photovoltaic generator
+pv_power:
+  bucket: "MEEB1"
+  measurement: "photovoltaic_generator"
+  field: "power" 
+  tags: {}
+
+
 # Weather values should build locally the measurement and take field as input
 temperature: 
   bucket: "weather"

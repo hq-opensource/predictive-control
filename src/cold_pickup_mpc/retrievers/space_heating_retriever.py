@@ -11,6 +11,8 @@ component to ensure the MPC has accurate thermal dynamics.
 from datetime import datetime, timedelta
 from typing import Any, Dict
 
+import requests
+
 from cold_pickup_mpc.retrievers.api_calls import (
     get_device_state,
     get_preferences_data,
@@ -93,12 +95,15 @@ class SpaceHeatingDataRetriever(DeviceRetriever):
 
         # Retrieve weather forecast
         weather_forecast = {}
-        temperature = get_weather_forecast(
-            variable="temperature",
-            start=start,
-            stop=stop,
-        )
-        weather_forecast["temperature"] = temperature
+        try:
+            temperature = get_weather_forecast(
+                variable="temperature",
+                start=start,
+                stop=stop,
+            )
+            weather_forecast["temperature"] = temperature
+        except requests.RequestException:
+            logger.error("Failed to retrieve weather forecast. Skipping.")
 
         data: Dict[str, Any] = {}
         data["initial_state"] = initial_state

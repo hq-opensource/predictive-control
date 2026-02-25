@@ -19,6 +19,7 @@ import numpy as np
 from cold_pickup_mpc.devices.electric_storage_mpc import ElectricStorageMPC
 from cold_pickup_mpc.devices.electric_vehicle_v1g_mpc import ElectricVehicleV1GMPC
 from cold_pickup_mpc.devices.helper import DeviceHelper
+from cold_pickup_mpc.devices.pv_mpc import PhotovoltaicGeneratorMPC
 from cold_pickup_mpc.devices.space_heating_mpc import SpaceHeatingMPC
 from cold_pickup_mpc.devices.water_heater_mpc import WaterHeaterMPC
 from cold_pickup_mpc.retrievers.api_calls import (
@@ -45,6 +46,7 @@ class BuildGlobalMPC:
         electric_storage: bool,
         electric_vehicle: bool,
         water_heater: bool,
+        photovoltaic_generator: bool,
     ) -> None:
         """Initializes the BuildGlobalMPC with flags indicating which device types to include.
 
@@ -53,10 +55,15 @@ class BuildGlobalMPC:
             electric_storage: A boolean indicating whether to include electric storage devices.
             electric_vehicle: A boolean indicating whether to include electric vehicle devices.
             water_heater: A boolean indicating whether to include water heater devices.
+            photovoltaic_generator: A boolean indicating whether to include photovoltaic generator devices.
         """
         # Instantiate devices
         self.devices = self._instantiate_devices(
-            electric_storage, electric_vehicle, water_heater, space_heating
+            electric_storage,
+            electric_vehicle,
+            water_heater,
+            space_heating,
+            photovoltaic_generator,
         )
 
     def solve_mpc(
@@ -132,7 +139,7 @@ class BuildGlobalMPC:
         )  # Ceiling to get the upper integer
 
         # Load the non controllable loads, power limit and price profile
-        price_profile, power_limit_array, non_controllable_loads = (
+        price_profile_array, power_limit_array, non_controllable_loads_array = (
             self._validate_global_inputs(
                 start, stop, price_profile, power_limit, steps_horizon_k
             )
@@ -161,13 +168,15 @@ class BuildGlobalMPC:
 
         # Create a optimization parameter for the price
         price_parameter = cvx.Parameter(
-            (1, price_profile.shape[1]), name="price", nonneg=True
+            (1, price_profile_array.shape[1]), name="price", nonneg=True
         )
-        price_parameter.value = price_profile
+        price_parameter.value = price_profile_array
 
         # Compute the energy balance
+        # TODO: Juan, the forecast of the non-controllable loads is giving negative values!
+        # TODO: Juan, verify the forecast of the non-controllable loads!
         aggregated_dispatch = cvx.sum(dispatch_devices, axis=0)
-        net_grid_power_exchange = aggregated_dispatch + non_controllable_loads
+        net_grid_power_exchange = aggregated_dispatch + non_controllable_loads_array
 
         # Define MPC objective
         global_mpc_objective = 0
@@ -181,8 +190,16 @@ class BuildGlobalMPC:
             constraints_devices
         )  # Add the constraints of the devices
 
-        # Add constraint for the available power
-        global_mpc_constraints.append(net_grid_power_exchange <= power_limit_array)
+        # Add constraint for the available power limit
+        if isinstance(net_grid_power_exchange, np.ndarray):
+            logger.warning(
+                "There are no controllable devices. This situation arises normally when there is only PV."
+            )
+            logger.warning(
+                "Because there is only PV, there is no possibility of limiting the power under certain value."
+            )
+        else:
+            global_mpc_constraints.append(net_grid_power_exchange <= power_limit_array)
 
         # Build the optimization problem
         global_mpc_problem = cvx.Problem(
@@ -249,6 +266,8 @@ class BuildGlobalMPC:
                 logger.error("Start dates of inputs do not match.")
             else:
                 logger.debug("Start dates of inputs match.")
+
+                # Compute non controllable loads
                 non_controllable_loads_flat = np.array(
                     list(non_controllable_loads["forecast"].values())
                 )[0:steps_horizon_k]
@@ -278,6 +297,7 @@ class BuildGlobalMPC:
         electric_vehicle: bool,
         water_heater: bool,
         space_heating: bool,
+        photovoltaic_generator: bool,
     ) -> Dict[str, Any]:
         """Instantiates the MPC models for the selected controllable devices.
 
@@ -296,7 +316,7 @@ class BuildGlobalMPC:
             A dictionary where keys are device types (strings) and values are
             the instantiated DeviceMPC objects.
         """
-        devices_mcp: Dict[str, Any] = {}
+        devices_mpc: Dict[str, Any] = {}
 
         all_devices = get_devices()["content"]
 
@@ -307,10 +327,25 @@ class BuildGlobalMPC:
                 all_devices, "type", device_type
             )
             if devices:
-                devices_mcp[device_type] = ElectricStorageMPC(devices)
+                devices_mpc[device_type] = ElectricStorageMPC(devices)
             else:
                 logger.info(
                     "No electric storage devices found. Skipping electric storage device MPC creation."
+                )
+
+        # Create the photovoltaic generator
+        # TODO: Add the photovoltaic generator on the devices.yaml file of the MEEB 1
+        # TODO: Add the photovoltaic generator on the redis database of the MEEB 1
+        if photovoltaic_generator:
+            device_type = DeviceHelper.PHOTOVOLTAIC_GENERATOR.value
+            devices = DeviceHelper.get_all_device_info_by_key(
+                all_devices, "type", device_type
+            )
+            if devices:
+                devices_mpc[device_type] = PhotovoltaicGeneratorMPC(devices)
+            else:
+                logger.info(
+                    "No photovoltaic generator devices found. Skipping photovoltaic generator device MPC creation."
                 )
 
         # Create the electric vehicle
@@ -320,7 +355,7 @@ class BuildGlobalMPC:
                 all_devices, "type", device_type
             )
             if devices:
-                devices_mcp[device_type] = ElectricVehicleV1GMPC(devices)
+                devices_mpc[device_type] = ElectricVehicleV1GMPC(devices)
             else:
                 logger.info(
                     "No electric vehicle devices found. Skipping electric vehicle device MPC creation."
@@ -333,7 +368,7 @@ class BuildGlobalMPC:
                 all_devices, "type", device_type
             )
             if devices:
-                devices_mcp[device_type] = WaterHeaterMPC(devices)
+                devices_mpc[device_type] = WaterHeaterMPC(devices)
             else:
                 logger.info(
                     "No water heater devices found. Skipping water heater device MPC creation."
@@ -346,10 +381,10 @@ class BuildGlobalMPC:
                 all_devices, "type", device_type
             )
             if devices:
-                devices_mcp[device_type] = SpaceHeatingMPC(devices)
+                devices_mpc[device_type] = SpaceHeatingMPC(devices)
             else:
                 logger.info(
                     "No space heating devices found. Skipping space heating device MPC creation."
                 )
 
-        return devices_mcp
+        return devices_mpc

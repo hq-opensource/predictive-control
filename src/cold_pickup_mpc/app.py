@@ -93,6 +93,7 @@ def _mpc_job(
 
     logger.info("MPC completed successfully")
 
+    # TODO: Juan, add the PV to the interpreter?
     interpreter = Interpreter(start, stop)
     controls = interpreter.interpret(
         global_mpc_problem,
@@ -217,21 +218,28 @@ def test_executor_mpc() -> None:
     space_heating = False
     electric_storage = False
     electric_vehicle = False
-    water_heater = True
+    water_heater = False
+    photovoltaic_generator = True
 
     # Create object
     executor_mpc = ExecutorMPC(
-        space_heating, electric_storage, electric_vehicle, water_heater
+        space_heating,
+        electric_storage,
+        electric_vehicle,
+        water_heater,
+        photovoltaic_generator,
     )
 
     # Time settings
-    start_optimization = datetime.fromisoformat("2025-05-26T19:00:00-04:00")
-    stop_optimization = start_optimization + timedelta(hours=2)
+    optimization_hours = 3
+    start_optimization = datetime.fromisoformat("2025-09-09T19:00:00-04:00")
+    stop_optimization = start_optimization + timedelta(hours=optimization_hours)
     interval = 10  # in minutes
 
     # Generate timestamps
     timestamps = [
-        start_optimization + timedelta(minutes=i) for i in range(0, 120 + 1, interval)
+        start_optimization + timedelta(minutes=i)
+        for i in range(0, optimization_hours * 60 + 1, interval)
     ]
 
     # Example: Generate dummy values
@@ -282,8 +290,8 @@ def test_real_time_control(start_control: datetime) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    # main()
     # Uncomment the following line to run the test function
-    # test_executor_mpc()
+    test_executor_mpc()
     # start_control = datetime.fromisoformat("2025-05-20T14:41:00-04:00")
     # test_real_time_control(start_control)

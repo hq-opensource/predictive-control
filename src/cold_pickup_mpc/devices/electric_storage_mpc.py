@@ -39,9 +39,10 @@ class ElectricStorageMPC(DeviceMPC):
 
         Args:
             devices: A list of dictionaries, where each dictionary contains the
-                     configuration and parameters of an electric storage device.
+            configuration and parameters of an electric storage device.
         """
-        self._space_heating_retriever = ElectricStorageDataRetriever(devices)
+        self._electric_storage_retriever = ElectricStorageDataRetriever(devices)
+        print("")
 
     def create_mpc_formulation(
         self,
@@ -76,7 +77,9 @@ class ElectricStorageMPC(DeviceMPC):
         delta_time = 1 / (60 / interval)
 
         # Retrieve data
-        electric_storage_info = self._space_heating_retriever.retrieve_data(start, stop)
+        electric_storage_info = self._electric_storage_retriever.retrieve_data(
+            start, stop
+        )
 
         # Load external variables
         electric_storage_arrays = self._process_data_as_arrays(

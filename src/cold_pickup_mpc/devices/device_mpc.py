@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import List, Tuple
 
 import cvxpy as cvx
+from numpy import ndarray
 
 
 class DeviceMPC(ABC):
@@ -30,7 +31,7 @@ class DeviceMPC(ABC):
         steps_horizon_k: int,
         interval: int = 10,
         norm_factor: int = 10,
-    ) -> Tuple[List, List, cvx.Variable]:
+    ) -> Tuple[List, List, cvx.Variable | ndarray]:
         """Creates the optimization formulation for the device.
 
         This method is responsible for defining the mathematical model of the device's
@@ -53,4 +54,4 @@ class DeviceMPC(ABC):
             - A cvxpy.Variable representing the device's power dispatch over the horizon.
               This variable links the device's behavior to the building's total consumption.
         """
-        return ([], [], cvx.Variable(steps_horizon_k))
+        return ([], [], cvx.Variable(shape=(1, steps_horizon_k)))
