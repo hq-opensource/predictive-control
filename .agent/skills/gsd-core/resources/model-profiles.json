@@ -1,0 +1,41 @@
+{
+    "quality": {
+        "gsd-planner": "opus",
+        "gsd-roadmapper": "opus",
+        "gsd-executor": "opus",
+        "gsd-phase-researcher": "opus",
+        "gsd-project-researcher": "opus",
+        "gsd-research-synthesizer": "sonnet",
+        "gsd-debugger": "opus",
+        "gsd-codebase-mapper": "sonnet",
+        "gsd-verifier": "sonnet",
+        "gsd-plan-checker": "sonnet",
+        "gsd-integration-checker": "sonnet"
+    },
+    "balanced": {
+        "gsd-planner": "opus",
+        "gsd-roadmapper": "sonnet",
+        "gsd-executor": "sonnet",
+        "gsd-phase-researcher": "sonnet",
+        "gsd-project-researcher": "sonnet",
+        "gsd-research-synthesizer": "sonnet",
+        "gsd-debugger": "sonnet",
+        "gsd-codebase-mapper": "haiku",
+        "gsd-verifier": "sonnet",
+        "gsd-plan-checker": "sonnet",
+        "gsd-integration-checker": "sonnet"
+    },
+    "budget": {
+        "gsd-planner": "sonnet",
+        "gsd-roadmapper": "sonnet",
+        "gsd-executor": "sonnet",
+        "gsd-phase-researcher": "haiku",
+        "gsd-project-researcher": "haiku",
+        "gsd-research-synthesizer": "haiku",
+        "gsd-debugger": "sonnet",
+        "gsd-codebase-mapper": "haiku",
+        "gsd-verifier": "haiku",
+        "gsd-plan-checker": "haiku",
+        "gsd-integration-checker": "haiku"
+    }
+}
