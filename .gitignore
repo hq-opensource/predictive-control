@@ -24,6 +24,30 @@ devices.yaml
 lnbits.yaml
 influxdb_mapping.yaml
 custom
-node_modules/
-__pycache__/
-*.pyc
+
+# Personal analysis and planning documents (untracked)
+EV_TECHNICAL_ANALYSIS.md
+EV_ROADMAP.md
+HEATING_TECHNICAL_ANALYSIS.md
+CHANGE_LOG_HEATING.md
+MOCK_DEPENDENCIES_LESSON.md
+BUGS_TO_SOLVE.md
+RAMPING_MATHEMATICAL_ANALYSIS.md
+RAMPING_VALIDATION_SUMMARY.md
+CHANGE_LOG_EV.md
+
+# Local test files (untracked)
+test_ev_actual.py
+test_ev_complete.py
+test_ev_real_optimization.py
+test_final_ramping.py
+test_ramping_standalone.py
+test_heating_complete.py
+
+# Generated test images and results (untracked)
+ev_optimization_results_*.png
+ramping_constraint_demonstration.png
+forced_ramping_activation.png
+realistic_ramping_scenarios.png
+ev_ramping_validation_results.png
+heating_optimization_analysis.png
