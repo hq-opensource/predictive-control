@@ -4,6 +4,8 @@ Bridges PREDICTIVE-CONTROL with Building Intelligence Core-API
 Fetches device config, runs EV MPC optimization, sends schedules back
 """
 
+# test
+
 import sys
 from pathlib import Path
 import requests
