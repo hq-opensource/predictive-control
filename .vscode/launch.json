@@ -4,9 +4,9 @@
             "name": "Cold Load Pickup MPC",
             "type": "debugpy",
             "request": "launch",
-            "python": "${workspaceFolder}/cold-pickup-mpc/.venv/Scripts/python",
+            "python": "${workspaceFolder}/.venv/Scripts/python",
             "module": "cold_pickup_mpc.app",
-            "cwd": "${workspaceFolder}/cold-pickup-mpc",
+            "cwd": "${workspaceFolder}/",
             "envFile": "${workspaceFolder}/local-dev.env"
         },
         {

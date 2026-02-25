@@ -197,10 +197,6 @@ class ElectricVehicleV1GMPC(DeviceMPC):
                 * self._energy_capacity
             )
 
-        # Charging logic: charge_power = switch * branched_profile * max_power
-        constraints.append(
-            charge_power[0, :] == switch * self._power_capacity * branched
-        )
         constraints.append(
             charge_power <= self._power_capacity
         )  # Redundant but ensures bounds
@@ -219,3 +215,123 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         dispatch = charge_power
 
         return objective, constraints, dispatch
+
+    def _process_data_as_arrays(
+        self, electric_vehicle_info: Dict[str, Any], steps_horizon_k: int
+    ) -> Dict[str, np.ndarray]:
+        """Processes raw device data into NumPy arrays for the optimization model.
+
+        This helper function takes the dictionary of data retrieved for the electric
+        storage device and converts it into a structured dictionary of NumPy arrays.
+        This format is required by the CVXPY optimization problem. It handles unit
+        conversions (e.g., SoC from % to kWh) and validates the initial state
+        against the defined SoC limits.
+
+        Args:
+            electric_vehicle_info: A dictionary containing the raw data and parameters
+                                   for the electric storage device.
+            steps_horizon_k: The number of time steps in the optimization horizon.
+
+        Returns:
+            A dictionary where keys are parameter names (e.g., 'initial_state',
+            'power_capacity') and values are the corresponding NumPy arrays.
+        """
+
+        static_properties: Dict[str, Dict[str, Any]] = {
+            "priority": {"type": int, "default": 13},
+            "critical_state": {"type": float, "default": 20.0},
+            "desired_state": {"type": float, "default": 90.0},
+            "power_capacity": {"type": float, "default": 4.5},
+            "critical_action": {"type": float, "default": 0.0},
+            "activation_action": {"type": float, "default": 4.5},
+            "deactivation_action": {"type": float, "default": 0.0},
+            "modulation_capability": {"type": bool, "default": True},
+            "discharge_capability": {"type": bool, "default": True},
+            "energy_capacity": {"type": float, "default": 75},
+            "charging_efficiency": {"type": float, "default": 0.98},
+            "discharging_efficiency": {"type": float, "default": 0.98},
+            "min_residual_energy": {"type": float, "default": 30},
+            "max_residual_energy": {"type": float, "default": 95},
+            "decay_factor": {"type": float, "default": 0.995},
+        }
+
+        electric_storage_arrays = {}
+        # Energy capacity of the battery
+        energy_capacity = electric_vehicle_info["energy_capacity"]["battery"]
+        electric_storage_arrays["energy_capacity"] = energy_capacity
+
+        # Initial state of the battery
+        initial_state = (
+            electric_vehicle_info["initial_state"]["battery"]
+            / 100
+            * electric_storage_arrays["energy_capacity"]
+        )
+        electric_storage_arrays["initial_state"] = initial_state
+
+        # Minimum and maximum residual energy of the battery
+        min_residual_energy = (
+            electric_vehicle_info["min_residual_energy"]["battery"]
+            / 100
+            * energy_capacity
+        )
+        max_residual_energy = (
+            electric_vehicle_info["max_residual_energy"]["battery"]
+            / 100
+            * energy_capacity
+        )
+        if initial_state > max_residual_energy:
+            logger.warning(
+                "Initial state of charge of the battery %s kWh is greater than maximum residual energy %s kWh.",
+                initial_state,
+                max_residual_energy,
+            )
+            logger.warning(
+                "Setting max_residual_energy to total energy capacity of the battery."
+            )
+            max_residual_energy = energy_capacity
+        if initial_state < min_residual_energy:
+            logger.warning(
+                "Initial state of charge of the battery %s kWh is less than minimum residual energy %s kWh.",
+                initial_state,
+                min_residual_energy,
+            )
+            logger.warning("Setting min_residual_energy of the battery to zero.")
+            min_residual_energy = energy_capacity
+        electric_storage_arrays["min_residual_energy"] = min_residual_energy
+        electric_storage_arrays["max_residual_energy"] = max_residual_energy
+
+        # Desired state of the battery
+        electric_storage_arrays["desired_state"] = (
+            electric_vehicle_info["desired_state"]["battery"] / 100 * energy_capacity
+        )
+
+        # Priority of the battery
+        electric_storage_arrays["priority"] = electric_vehicle_info["priority"][
+            "battery"
+        ]
+
+        # Final state of charge requirement of the battery
+        electric_storage_arrays["final_soc_requirement"] = (
+            electric_vehicle_info["final_soc_requirement"]["battery"]
+            / 100
+            * electric_storage_arrays["energy_capacity"]
+        )
+
+        # Other variables
+        electric_storage_arrays["power_capacity"] = electric_vehicle_info[
+            "power_capacity"
+        ]["battery"]
+        electric_storage_arrays["decay_factor"] = electric_vehicle_info["decay_factor"][
+            "battery"
+        ]
+        electric_storage_arrays["charging_efficiency"] = electric_vehicle_info[
+            "charging_efficiency"
+        ]["battery"]
+        electric_storage_arrays["discharging_efficiency"] = electric_vehicle_info[
+            "discharging_efficiency"
+        ]["battery"]
+        electric_storage_arrays["norm_factor"] = electric_vehicle_info[
+            "energy_capacity"
+        ]["battery"]
+
+        return electric_storage_arrays
