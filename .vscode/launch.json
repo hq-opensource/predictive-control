@@ -8,6 +8,17 @@
             "module": "cold_pickup_mpc.app",
             "cwd": "${workspaceFolder}/cold-pickup-mpc",
             "envFile": "${workspaceFolder}/local-dev.env"
+        },
+        {
+            "name": "Building Intelligence Connector",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/building_intelligence_connector.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "LOGLEVEL": "DEBUG"
+            }
         }
    ],
 }

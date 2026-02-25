@@ -41,28 +41,23 @@ class ElectricVehicleV1GMPC(DeviceMPC):
             device_info: A list containing a single dictionary with the configuration
                          and parameters of the electric vehicle.
         """
-        super().__init__(device_info)
+        super().__init__()
         # Extract info of the unique device
         device_dict = device_info[0]
         self.device_dict = device_dict
         self._energy_capacity = float(device_dict["energy_capacity"])  # Wh
         self._power_capacity = float(device_dict["power_capacity"])  # W
-        self._charging_efficiency = float(device_dict.get("charging_efficiency", 0.99))
+        self._charging_efficiency = float(device_dict.get("charging_efficiency") or 0.99)
         self._min_residual_energy = float(
-            device_dict.get("min_residual_energy", 25)
-        )  # %
+            device_dict.get("min_residual_energy") or 25)  # %
         self._max_residual_energy = float(
-            device_dict.get("max_residual_energy", 95)
-        )  # %
+            device_dict.get("max_residual_energy") or 95)  # %
         self._decay_factor = float(
-            device_dict.get("decay_factor", 0.99)
-        )  # Optional, default 1
+            device_dict.get("decay_factor", 0.99))  # Optional, default 1
         self._max_power_ramp_rate = float(
-            device_dict.get("max_power_ramp_rate", 0.2)
-        )  # Maximum change in switch variable per time step (default 20%/step)
+            device_dict.get("max_power_ramp_rate", 0.2))  # Maximum change in switch variable per time step (default 20%/step)
         self._enable_ramping = bool(
-            device_dict.get("enable_ramping", True)
-        )  # Enable/disable power ramping constraints
+            device_dict.get("enable_ramping", True))  # Enable/disable power ramping constraints
 
     def create_mpc_formulation(
         self,
@@ -143,7 +138,7 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         # Define optimization variables
         switch = cvx.Variable(
             steps_horizon_k, nonneg=True, name="electric_vehicle_switch"
-        )
+        ) # Continuous between 0 and 1
         charge_power = cvx.Variable(
             (1, steps_horizon_k), nonneg=True, name="electric_vehicle_charge_power"
         )
@@ -159,7 +154,7 @@ class ElectricVehicleV1GMPC(DeviceMPC):
             self.device_dict.get("norm_factor", self._energy_capacity)
         )  # The use of residual energy allows to use capacity as normalization factor
         desired_soc = (
-            float(self.device_dict.get("desired_state", 90))
+            float(self.device_dict.get("desired_state") or 90)
             / 100
             * self._energy_capacity
         )
