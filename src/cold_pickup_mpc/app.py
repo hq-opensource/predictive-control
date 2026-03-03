@@ -232,7 +232,11 @@ def test_executor_mpc() -> None:
 
     # Time settings
     optimization_hours = 3
-    start_optimization = datetime.fromisoformat("2025-09-09T19:00:00-04:00")
+    # Use current time rounded up to the next 10-minute interval
+    now = datetime.now().astimezone()
+    minutes_to_add = 10 - (now.minute % 10)
+    start_optimization = (now + timedelta(minutes=minutes_to_add)).replace(second=0, microsecond=0)
+    
     stop_optimization = start_optimization + timedelta(hours=optimization_hours)
     interval = 10  # in minutes
 

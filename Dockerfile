@@ -11,9 +11,7 @@ ENV POETRY_NO_INTERACTION=1 \
 WORKDIR /app
 
 # Copy the application source files
-COPY cold-pickup-mpc cold-pickup-mpc
-
-WORKDIR /app/cold-pickup-mpc
+COPY . .
 
 # Install the dependencies and create a virtual environment
 RUN poetry install
@@ -22,11 +20,11 @@ RUN poetry install
 FROM python:3.11.0-slim-bullseye AS runtime
 
 # Add the virtual environment binaries to PATH
-ENV PATH="/app/cold-pickup-mpc/.venv/bin:$PATH"
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy the files (including the virtual environment) from the builder
 COPY --from=builder /app /app
 
-WORKDIR /app/cold-pickup-mpc
+WORKDIR /app
 
 ENTRYPOINT ["python", "-m", "cold_pickup_mpc.app"]
