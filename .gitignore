@@ -50,4 +50,12 @@ ramping_constraint_demonstration.png
 forced_ramping_activation.png
 realistic_ramping_scenarios.png
 ev_ramping_validation_results.png
-heating_optimization_analysis.png
+# Python compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+.cache/
+.venv/
