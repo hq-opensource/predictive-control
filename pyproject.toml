@@ -1,23 +1,24 @@
-[tool.poetry]
+[project]
 name = "power-limit"
 version = "0.1.0"
 description = "Executes the MPC optimization for the Cold Load Pickup problem."
-authors = ["Hydro-Québec <hydroquebec@hydroquebec.com>"]
-packages = [{include = "cold_pickup_mpc", from = "src"}]
 readme = "README.md"
-
-[tool.poetry.dependencies]
-python = "^3.11"
-pandas = "^2.2.3"
-cvxpy = "^1.6.0"
-requests = "^2.32.3"
-faststream = {extras = ["redis"], version = "^0.5.40"}
-apscheduler = "^3.11.0"
-influxdb-client = "^1.49.0"
-pyyaml = "^6.0.2"
-pvlib = "^0.13.0"
-
+requires-python = ">=3.13"
+dependencies = [
+    "pandas>=2.2.3",
+    "cvxpy>=1.6.1",
+    "requests>=2.32.3",
+    "faststream[redis]>=0.5.34",
+    "apscheduler>=3.11.0",
+    "influxdb-client>=1.48.0",
+    "pyyaml>=6.0.2",
+    "pvlib>=0.11.0",
+    "debugpy>=1.8.12",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cold_pickup_mpc"]
