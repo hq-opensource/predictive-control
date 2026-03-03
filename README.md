@@ -32,8 +32,8 @@ The `predictive_control` package provides the implementation for the grid servic
 
 ### Prerequisites
 
-*   [Python 3.11+](https://www.python.org/downloads/)
-*   [Poetry](https://python-poetry.org/docs/#installation) for dependency management.
+*   [Python 3.13+](https://www.python.org/downloads/)
+*   [uv](https://docs.astral.sh/uv/) for dependency management.
 *   [Docker](https://docs.docker.com/get-docker/) for containerized execution.
 
 ### Installation
@@ -44,15 +44,28 @@ The `predictive_control` package provides the implementation for the grid servic
     cd predictive-control
     ```
 
-2.  **Install dependencies using Poetry:**
+2.  **Install dependencies using uv:**
     This command will create a virtual environment and install all the necessary packages defined in `pyproject.toml`.
     ```bash
-    poetry install
+    uv sync
     ```
 
 ---
 
 ## Usage
+
+#### Local Development
+
+1.  **Configure environment variables:**
+    Create a `.env` file in the root directory and set the necessary variables (e.g., `CORE_API_URL`, `REDIS_HOST`).
+    ```bash
+    cp .env.example .env # If available, or manually create one
+    ```
+
+2.  **Run the application:**
+    ```bash
+    uv run python -m cold_pickup_mpc.app
+    ```
 
 #### Running with Docker
 
@@ -66,20 +79,6 @@ The easiest way to run the application is by using the provided Docker container
 2.  **Run the Docker container:**
     ```bash
     docker run predictive-control
-    ```
-
-#### Running with Poetry
-
-You can also run the application directly using the virtual environment managed by Poetry.
-
-1.  **Activate the virtual environment:**
-    ```bash
-    poetry shell
-    ```
-
-2.  **Run the application:**
-    ```bash
-    python -m src.cold_pickup_mpc.app
     ```
 
 ---
