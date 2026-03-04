@@ -186,7 +186,7 @@ class PhotovoltaicGeneratorMPC(DeviceMPC):
 
             interpreter.save_results_to_influxdb(
                 data=generation_to_save,
-                bucket="MEEB1",
+                bucket="MEEB2",
                 device_type=DeviceHelper.PHOTOVOLTAIC_GENERATOR.value,
                 write_api=write_api,
             )

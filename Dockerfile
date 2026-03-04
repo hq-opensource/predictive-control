@@ -1,30 +1,42 @@
-FROM python:3.11.0-slim-bullseye AS builder
+# Use a Python 3.13 image
+FROM python:3.13-slim AS builder
 
-# Install Poetry tool
-RUN pip3 install poetry && poetry --version
+# Install build dependencies (for cvxpy)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    & rm -rf /var/lib/apt/lists/*
 
-ENV POETRY_NO_INTERACTION=1 \
-    POETRY_VIRTUALENVS_IN_PROJECT=1 \
-    POETRY_VIRTUALENVS_CREATE=1 \
-    POETRY_CACHE_DIR=/tmp/poetry_cache
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
+# Set working directory
 WORKDIR /app
 
-# Copy the application source files
+# Enable bytecode compilation
+ENV UV_COMPILE_BYTECODE=1
+
+# Copy everything
 COPY . .
 
-# Install the dependencies and create a virtual environment
-RUN poetry install
-
-# The runtime
-FROM python:3.11.0-slim-bullseye AS runtime
-
-# Add the virtual environment binaries to PATH
+# Install dependencies and the project into a virtual environment
+RUN uv venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Copy the files (including the virtual environment) from the builder
-COPY --from=builder /app /app
+# Install the project
+RUN uv pip install .
+
+# Final stage
+FROM python:3.13-slim AS runtime
 
 WORKDIR /app
 
+# Copy the virtual environment and application code from the builder
+COPY --from=builder /app /app
+
+# Set environment variables
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONUNBUFFERED=1
+
+# Command to run the application
 ENTRYPOINT ["python", "-m", "cold_pickup_mpc.app"]
