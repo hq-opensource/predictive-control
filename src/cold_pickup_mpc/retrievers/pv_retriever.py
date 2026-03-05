@@ -34,7 +34,7 @@ class PhotovoltaicGeneratorDataRetriever(DeviceRetriever):
                 "type": str,
                 "default": "Schneider_Electric_Solar_Inc___XW_Pro_6848_NA__240V_",
             },
-            "pv_module": {"type": str, "default": "Canadian_Solar_Inc__CS6k_280M"},
+            "pv_module": {"type": str, "default": "Canadian_Solar_Inc__CS6K_280M"},
             "modules_per_string": {"type": int, "default": 8},
             "strings_per_inverter": {"type": int, "default": 2},
             "surface_tilt": {"type": int, "default": 45},
