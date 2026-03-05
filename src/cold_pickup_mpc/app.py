@@ -222,9 +222,9 @@ def test_executor_mpc() -> None:
     # Define devices to use
     space_heating = False
     electric_storage = False
-    electric_vehicle = True
+    electric_vehicle = False
     water_heater = False
-    photovoltaic_generator = False
+    photovoltaic_generator = True
 
     # Create object
     executor_mpc = ExecutorMPC(
@@ -236,10 +236,10 @@ def test_executor_mpc() -> None:
     )
 
     # Time settings
-    optimization_hours = 3
+    optimization_hours = 6
     # Use current time rounded up to the next 10-minute interval
     now = datetime.now().astimezone()
-    minutes_to_add = 10 - (now.minute % 10)
+    minutes_to_add = 20 - (now.minute % 10)
     start_optimization = (now + timedelta(minutes=minutes_to_add)).replace(second=0, microsecond=0)
     
     stop_optimization = start_optimization + timedelta(hours=optimization_hours)

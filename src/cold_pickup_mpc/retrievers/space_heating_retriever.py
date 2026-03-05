@@ -111,7 +111,7 @@ class SpaceHeatingDataRetriever(DeviceRetriever):
         data["occupancy_preferences"] = occupancy_preferences
 
         # Save thermal model
-        data["thermal_model"] = self._learn_thermal_model(days_in_the_past=10)
+        data["thermal_model"] = self._learn_thermal_model(days_in_the_past=1)
 
         # Save weather forecast
         data["weather_forecast"] = weather_forecast

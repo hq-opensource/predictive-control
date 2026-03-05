@@ -15,6 +15,10 @@ from cold_pickup_mpc.retrievers.pv_retriever import (
     PhotovoltaicGeneratorDataRetriever,
 )
 
+from cold_pickup_mpc.util.logging import LoggingUtil
+
+logger = LoggingUtil.get_logger(__name__)
+
 
 class PhotovoltaicGeneratorMPC(DeviceMPC):
     """
@@ -105,11 +109,13 @@ class PhotovoltaicGeneratorMPC(DeviceMPC):
         # Load pv module
         modules_path = os.path.join(database_path, "pvlib_cec_modules.csv")
         pv_module_name = device_dict["pv_module"]["rooftop_photovoltaic_panels"]
+        logger.info(f"PV module name: {pv_module_name}")
         pv_module_data = pvlib.pvsystem.retrieve_sam(path=modules_path)[pv_module_name]
 
         # Load inverter
         inverter_path = os.path.join(database_path, "pvlib_cec_inverters.csv")
         inverter_name = device_dict["inverter"]["rooftop_photovoltaic_panels"]
+        logger.info(f"Inverter name: {inverter_name}")
         inverter_data = pvlib.pvsystem.retrieve_sam(path=inverter_path)[inverter_name]
 
         # Load number of strings for the system

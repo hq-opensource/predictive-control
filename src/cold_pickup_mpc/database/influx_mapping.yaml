@@ -63,9 +63,9 @@ v1g_net_power:
   field: "power"
   tags: {}
 v1g_state_of_charge:
-  bucket: ""
-  measurement: ""
-  field: ""
+  bucket: "MEEB2"
+  measurement: "electric_vehicle_state"
+  field: "state_of_charge"
   tags: {}
 v2g_net_power:
   bucket: ""
@@ -140,7 +140,6 @@ pv_power:
   measurement: "photovoltaic_generator"
   field: "power" 
   tags: {}
-
 
 # Weather values should build locally the measurement and take field as input
 temperature: 
