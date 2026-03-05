@@ -53,7 +53,7 @@ class ElectricVehicleV1gDataRetriever(DeviceRetriever):
             "discharging_efficiency": {"type": float, "default": 0.98},
             "min_residual_energy": {"type": float, "default": 30},
             "max_residual_energy": {"type": float, "default": 95},
-            "decay_factor": {"type": float, "default": 0.995},
+            "decay_factor": {"type": float, "default": 1.0},
         }
 
         return static_properties
@@ -81,8 +81,10 @@ class ElectricVehicleV1gDataRetriever(DeviceRetriever):
             entity_id = device.get("entity_id", "unknown")
 
             # Build dictionary of initial states
-            # TODO this is not implemented yet in the API for EV
-            initial_state[entity_id] = get_device_state(entity_id)
+            # The state of charge is retrieved using the 'soc' field.
+            # If the API returns a dictionary, the retriever will return it as is, 
+            # and the MPC class will handle the extraction of the specific value.
+            initial_state[entity_id] = get_device_state(entity_id, field="soc")
 
             # Build dictionary of setpoint preferences
             soc_preferences[entity_id] = get_preferences_data(

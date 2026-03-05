@@ -134,7 +134,7 @@ class Interpreter:
         if electric_vehicle:
             if global_mpc_problem.status in ["infeasible", "infeasible_inaccurate"]:
                 logger.warning(
-                    "Electric storage optimization problem is infeasible. Skipping variable extraction."
+                    "Electric vehicle optimization problem is infeasible. Skipping variable extraction."
                 )
                 results_electric_vehicle = pd.DataFrame(index=date_range)
                 control_electric_vehicle = pd.DataFrame(index=date_range)
@@ -146,11 +146,11 @@ class Interpreter:
             controls = pd.concat([controls, control_electric_vehicle], axis=1)
 
             # Save results to InfluxDB
-            measurement = influxdb_mapping["eb_net_power"]["measurement"]
+            measurement = influxdb_mapping["v1g_net_power"]["measurement"]
             data = self.convert_results_to_list(results_electric_vehicle, measurement)
-            bucket = influxdb_mapping["eb_net_power"]["bucket"]
+            bucket = influxdb_mapping["v1g_net_power"]["bucket"]
             self.save_results_to_influxdb(
-                data, bucket, DeviceHelper.ELECTRIC_VEHICLE.value, write_api
+                data, bucket, DeviceHelper.ELECTRIC_VEHICLE_V1G.value, write_api
             )
 
         # Evaluate and save results for the electric storage
@@ -321,6 +321,96 @@ class Interpreter:
             index=date_range,
         )
         return results_water_heater, control_water_heater
+    def load_electric_vehicle_variables(
+        self,
+        global_mpc_problem: Problem,
+        devices: List[Dict[str, Any]],
+        interval: int = 10,
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """Extracts and processes electric vehicle variables from the solved MPC problem.
+
+        This method retrieves the optimal charge power and residual energy for
+        the electric vehicle from the `global_mpc_problem`'s variables. It then
+        formats these into Pandas DataFrames.
+
+        Args:
+            global_mpc_problem: The solved CVXPY Problem object.
+            devices: A list of device dictionaries, used to retrieve device parameters.
+            interval: The time step interval in minutes.
+
+        Returns:
+            A tuple containing two Pandas DataFrames:
+            - `results_electric_vehicle`: Contains the charge power, residual energy, and SoC profiles.
+            - `control_electric_vehicle`: Contains the charge power control signals
+                                         mapped to device entity IDs.
+        """
+
+        # Build columns for the dataframes
+        state_of_charge = ["state_of_charge"]  # 0-100%
+        residual_energy = ["residual_energy"]  # Wh
+        charge_power = ["charge_power"]  # kW
+
+        # Build index
+        date_range = pd.date_range(
+            start=self.start,
+            end=self.stop,
+            freq=f"{interval}min",
+        )[:-1]  # Remove the last timestamp
+        
+        # Initialize DataFrames
+        soc_charge_df = pd.DataFrame(columns=state_of_charge, index=date_range)
+        residual_energy_df = pd.DataFrame(columns=residual_energy, index=date_range)
+        charge_df = pd.DataFrame(columns=charge_power, index=date_range)
+
+        # Extract variable names and values from the global_mpc_problem
+        for variable in global_mpc_problem.variables():
+            if variable.name() == "electric_vehicle_charge_power":
+                var_array = np.around(variable.value.T, 3)
+                charge_df = pd.DataFrame(
+                    data=var_array, columns=charge_power, index=date_range
+                )
+            elif variable.name() == "electric_vehicle_residual_energy":
+                var_array = np.around(variable.value.T, 3).flatten()[1:]
+                residual_energy_df = pd.DataFrame(
+                    data=var_array, columns=residual_energy, index=date_range
+                )
+
+        # Compute the state of charge
+        energy_capacity = DeviceHelper.get_all_values_by_filtering_devices(
+            device_list=devices,
+            filter_key="type",
+            filter_value=DeviceHelper.ELECTRIC_VEHICLE_V1G.value,
+            target_key="energy_capacity",
+        )
+        if energy_capacity:
+            soc_charge = np.around(
+                (residual_energy_df["residual_energy"] / energy_capacity[0] * 100).values, 3
+            )
+            soc_charge_df = pd.DataFrame(
+                data=soc_charge, columns=state_of_charge, index=date_range
+            )
+
+        # Create the final DataFrame
+        results_electric_vehicle = pd.concat(
+            [charge_df, residual_energy_df, soc_charge_df],
+            axis=1,
+        )
+
+        # Create the control DataFrame
+        column_entity_id = DeviceHelper.get_all_values_by_filtering_devices(
+            device_list=devices,
+            filter_key="type",
+            filter_value=DeviceHelper.ELECTRIC_VEHICLE_V1G.value,
+            target_key="entity_id",
+        )
+        control_electric_vehicle = pd.DataFrame(
+            data=results_electric_vehicle[charge_power].values,
+            columns=column_entity_id,
+            index=date_range,
+        )
+
+        return results_electric_vehicle, control_electric_vehicle
+
 
     def load_electric_storage_variables(
         self,

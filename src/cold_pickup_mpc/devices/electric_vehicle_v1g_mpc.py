@@ -15,6 +15,9 @@ import numpy as np
 import pandas as pd
 
 from cold_pickup_mpc.devices.device_mpc import DeviceMPC
+from cold_pickup_mpc.retrievers.electric_vehicle_v1g_retriever import (
+    ElectricVehicleV1gDataRetriever,
+)
 from cold_pickup_mpc.util.logging import LoggingUtil
 
 logger = LoggingUtil.get_logger(__name__)
@@ -33,17 +36,18 @@ class ElectricVehicleV1GMPC(DeviceMPC):
 
     def __init__(
         self,
-        device_info: List[Dict[str, Any]],
+        devices: List[Dict[str, Any]],
     ) -> None:
         """Initializes the ElectricVehicleV1GMPC.
 
         Args:
-            device_info: A list containing a single dictionary with the configuration
-                         and parameters of the electric vehicle.
+            devices: A list containing dictionaries with the configuration
+                         and parameters of the electric vehicles.
         """
         super().__init__()
-        # Extract info of the unique device
-        device_dict = device_info[0]
+        self._electric_vehicle_retriever = ElectricVehicleV1gDataRetriever(devices)
+        # Extract info of the unique device (current implementation handles one EV)
+        device_dict = devices[0]
         self.device_dict = device_dict
         self._energy_capacity = float(device_dict["energy_capacity"])  # Wh
         self._power_capacity = float(device_dict["power_capacity"])  # W
@@ -63,8 +67,9 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         self,
         start: datetime,
         stop: datetime,
-        interval: int,
-        v1g_info: Dict[str, pd.DataFrame],
+        steps_horizon_k: int,
+        interval: int = 10,
+        norm_factor: int = 10,
     ) -> Tuple[List[Any], List[Any], cvx.Variable]:
         """Creates the optimization formulation for the V1G electric vehicle.
 
@@ -94,45 +99,35 @@ class ElectricVehicleV1GMPC(DeviceMPC):
             ValueError: If the input data (e.g., `branched_profile`, `initial_state`)
                         has incorrect dimensions or values.
         """
+        # Retrieve data
+        v1g_info = self._electric_vehicle_retriever.retrieve_data(start, stop)
+
+        # Build dynamic constraints for the optimization problem
+        v1g_arrays = self._process_data_as_arrays(v1g_info, steps_horizon_k)
+
         # Create external variables
-        initial_state = v1g_info["initial_state"]
-        branched_profile = v1g_info["branched_profile"]
+        initial_state = v1g_arrays["initial_state"]
+        branched_profile = v1g_arrays["branched_profile"]
+        min_residual_energy = v1g_arrays["min_residual_energy"]
+        max_residual_energy = v1g_arrays["max_residual_energy"]
+        decay_factor = v1g_arrays["decay_factor"]
 
         logger.debug(f"Creating EV MPC formulation: {start} to {stop}, interval={interval}min")
         logger.debug(f"EV parameters: capacity={self._energy_capacity}Wh, power={self._power_capacity}W")
         logger.debug(f"Ramping enabled: {self._enable_ramping}, max_ramp_rate: {self._max_power_ramp_rate}")
 
-        # Define simulation values
-        # Validate input timestamps
-        if stop < start:
-            logger.error(
-                "Invalid timestamps: stop time must be greater than start time."
-            )
-            raise ValueError("stop time must be greater than start time.")
-
-        # Compute number of steps for the computed time
-        timespan = (
-            stop - start
-        ).total_seconds() / 60  # Convert time difference to minutes
-        steps_horizon_k = int(
-            np.ceil(timespan / interval)
-        )  # Ceiling to get the upper integer
         delta_time = 1 / (60 / interval)
 
         # Validate inputs
-        branched = branched_profile.to_numpy().flatten()
-        if len(branched) != steps_horizon_k:
-            logger.error(f"branched_profile length {len(branched)} does not match time horizon {steps_horizon_k}")
+        # Validate inputs
+        if len(branched_profile) != steps_horizon_k:
+            logger.error(f"branched_profile length {len(branched_profile)} does not match time horizon {steps_horizon_k}")
             raise ValueError("branched_profile length must match time horizon.")
-        if not np.all(np.isin(branched, [0, 1])):
+        if not np.all(np.isin(branched_profile, [0, 1])):
             logger.error("branched_profile contains invalid values (must be 0 or 1)")
             raise ValueError("branched_profile must contain only 0s and 1s.")
-        init_val = initial_state.to_numpy().flatten()
-        if init_val.size != 1:
-            logger.error(f"initial_state has {init_val.size} values, expected 1")
-            raise ValueError("initial_state must be a single value.")
-        if init_val[0] < 0 or init_val[0] > self._energy_capacity:
-            logger.error(f"initial_state {init_val[0]} is outside valid range [0, {self._energy_capacity}]")
+        if initial_state < 0 or initial_state > self._energy_capacity:
+            logger.error(f"initial_state {initial_state} is outside valid range [0, {self._energy_capacity}]")
             raise ValueError(f"initial_state must be between 0 and {self._energy_capacity} Wh.")
 
         # Define optimization variables
@@ -183,12 +178,12 @@ class ElectricVehicleV1GMPC(DeviceMPC):
 
         # State constraints
         constraints.append(
-            residual_energy <= self._max_residual_energy / 100 * self._energy_capacity
+            residual_energy <= max_residual_energy / 100 * self._energy_capacity
         )
         constraints.append(
-            residual_energy >= self._min_residual_energy / 100 * self._energy_capacity
+            residual_energy >= min_residual_energy / 100 * self._energy_capacity
         )
-        constraints.append(residual_energy[0, 0] == init_val[0])
+        constraints.append(residual_energy[0, 0] == initial_state)
         if "final_soc_requirement" in self.device_dict:
             constraints.append(
                 residual_energy[0, -1]
@@ -204,11 +199,21 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         # Balance equation
         constraints.append(
             residual_energy[0, 1 : steps_horizon_k + 1]
-            == self._decay_factor * residual_energy[0, 0:steps_horizon_k]
+            == decay_factor * residual_energy[0, 0:steps_horizon_k]
             + cvx.multiply(
                 self._charging_efficiency * delta_time,
                 charge_power[0, 0:steps_horizon_k],
             )
+        )
+
+        # Branched constraint (only charge when plugged in)
+        constraints.append(
+            charge_power[0, :] <= cvx.multiply(branched_profile, self._power_capacity)
+        )
+
+        # Switch constraint (continuous control)
+        constraints.append(
+            charge_power[0, :] <= cvx.multiply(switch, self._power_capacity)
         )
 
         # Add the dispatch variable
@@ -217,121 +222,74 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         return objective, constraints, dispatch
 
     def _process_data_as_arrays(
-        self, electric_vehicle_info: Dict[str, Any], steps_horizon_k: int
-    ) -> Dict[str, np.ndarray]:
+        self, v1g_info: Dict[str, Any], steps_horizon_k: int
+    ) -> Dict[str, Any]:
         """Processes raw device data into NumPy arrays for the optimization model.
 
         This helper function takes the dictionary of data retrieved for the electric
-        storage device and converts it into a structured dictionary of NumPy arrays.
-        This format is required by the CVXPY optimization problem. It handles unit
-        conversions (e.g., SoC from % to kWh) and validates the initial state
-        against the defined SoC limits.
+        vehicle and converts it into a structured dictionary of NumPy arrays.
 
         Args:
-            electric_vehicle_info: A dictionary containing the raw data and parameters
-                                   for the electric storage device.
+            v1g_info: A dictionary containing the raw data and parameters
+                                   for the electric vehicle.
             steps_horizon_k: The number of time steps in the optimization horizon.
 
         Returns:
             A dictionary where keys are parameter names (e.g., 'initial_state',
-            'power_capacity') and values are the corresponding NumPy arrays.
+            'branched_profile') and values are the corresponding NumPy arrays.
         """
+        entity_id = self.device_dict["entity_id"]
+        v1g_arrays = {}
 
-        static_properties: Dict[str, Dict[str, Any]] = {
-            "priority": {"type": int, "default": 13},
-            "critical_state": {"type": float, "default": 20.0},
-            "desired_state": {"type": float, "default": 90.0},
-            "power_capacity": {"type": float, "default": 4.5},
-            "critical_action": {"type": float, "default": 0.0},
-            "activation_action": {"type": float, "default": 4.5},
-            "deactivation_action": {"type": float, "default": 0.0},
-            "modulation_capability": {"type": bool, "default": True},
-            "discharge_capability": {"type": bool, "default": True},
-            "energy_capacity": {"type": float, "default": 75},
-            "charging_efficiency": {"type": float, "default": 0.98},
-            "discharging_efficiency": {"type": float, "default": 0.98},
-            "min_residual_energy": {"type": float, "default": 30},
-            "max_residual_energy": {"type": float, "default": 95},
-            "decay_factor": {"type": float, "default": 0.995},
-        }
+        # 1. Energy capacity (assume static property, fetched via retriever)
+        energy_capacity = v1g_info["energy_capacity"][entity_id]
+        v1g_arrays["energy_capacity"] = energy_capacity
 
-        electric_storage_arrays = {}
-        # Energy capacity of the battery
-        energy_capacity = electric_vehicle_info["energy_capacity"]["battery"]
-        electric_storage_arrays["energy_capacity"] = energy_capacity
+        # 2. Initial state
+        raw_initial_state = v1g_info["initial_state"][entity_id]
+        # If the state is a dictionary, extract the specific field (usually 'soc')
+        if isinstance(raw_initial_state, dict):
+            # Try some common field names if not explicitly specified
+            initial_soc = raw_initial_state.get("soc")
+            if initial_soc is None:
+                 initial_soc = raw_initial_state.get("battery_soc", 50.0)
+        else:
+            initial_soc = raw_initial_state
+            
+        initial_state_wh = (initial_soc / 100 * energy_capacity)
+        v1g_arrays["initial_state"] = initial_state_wh
 
-        # Initial state of the battery
-        initial_state = (
-            electric_vehicle_info["initial_state"]["battery"]
-            / 100
-            * electric_storage_arrays["energy_capacity"]
-        )
-        electric_storage_arrays["initial_state"] = initial_state
+        # 3. Min/Max residual energy
+        min_residual_energy = v1g_info["min_residual_energy"][entity_id]
+        max_residual_energy = v1g_info["max_residual_energy"][entity_id]
 
-        # Minimum and maximum residual energy of the battery
-        min_residual_energy = (
-            electric_vehicle_info["min_residual_energy"]["battery"]
-            / 100
-            * energy_capacity
-        )
-        max_residual_energy = (
-            electric_vehicle_info["max_residual_energy"]["battery"]
-            / 100
-            * energy_capacity
-        )
-        if initial_state > max_residual_energy:
+        if initial_soc > max_residual_energy:
             logger.warning(
-                "Initial state of charge of the battery %s kWh is greater than maximum residual energy %s kWh.",
-                initial_state,
-                max_residual_energy,
+                "Initial SoC of EV %s (%s%%) is greater than max_residual_energy (%s%%). Adjusting max.",
+                entity_id, initial_soc, max_residual_energy
             )
+            max_residual_energy = initial_soc
+        if initial_soc < min_residual_energy:
             logger.warning(
-                "Setting max_residual_energy to total energy capacity of the battery."
+                "Initial SoC of EV %s (%s%%) is less than min_residual_energy (%s%%). Adjusting min to slightly below initial.",
+                entity_id, initial_soc, min_residual_energy
             )
-            max_residual_energy = energy_capacity
-        if initial_state < min_residual_energy:
-            logger.warning(
-                "Initial state of charge of the battery %s kWh is less than minimum residual energy %s kWh.",
-                initial_state,
-                min_residual_energy,
-            )
-            logger.warning("Setting min_residual_energy of the battery to zero.")
-            min_residual_energy = energy_capacity
-        electric_storage_arrays["min_residual_energy"] = min_residual_energy
-        electric_storage_arrays["max_residual_energy"] = max_residual_energy
+            min_residual_energy = max(0, initial_soc - 0.1) # Slack for feasibility
+        
+        v1g_arrays["min_residual_energy"] = min_residual_energy
+        v1g_arrays["max_residual_energy"] = max_residual_energy
 
-        # Desired state of the battery
-        electric_storage_arrays["desired_state"] = (
-            electric_vehicle_info["desired_state"]["battery"] / 100 * energy_capacity
-        )
+        # 4. Decay factor
+        v1g_arrays["decay_factor"] = v1g_info["decay_factor"][entity_id]
 
-        # Priority of the battery
-        electric_storage_arrays["priority"] = electric_vehicle_info["priority"][
-            "battery"
-        ]
+        # 5. Branched profile (connection status)
+        raw_branched = v1g_info["branched_preferences"][entity_id]
+        if isinstance(raw_branched, dict) and "forecast" in raw_branched:
+             branched_dict = raw_branched["forecast"]
+        else:
+             branched_dict = raw_branched
+             
+        branched_values = np.array(list(branched_dict.values()), dtype=float)[:steps_horizon_k]
+        v1g_arrays["branched_profile"] = branched_values
 
-        # Final state of charge requirement of the battery
-        electric_storage_arrays["final_soc_requirement"] = (
-            electric_vehicle_info["final_soc_requirement"]["battery"]
-            / 100
-            * electric_storage_arrays["energy_capacity"]
-        )
-
-        # Other variables
-        electric_storage_arrays["power_capacity"] = electric_vehicle_info[
-            "power_capacity"
-        ]["battery"]
-        electric_storage_arrays["decay_factor"] = electric_vehicle_info["decay_factor"][
-            "battery"
-        ]
-        electric_storage_arrays["charging_efficiency"] = electric_vehicle_info[
-            "charging_efficiency"
-        ]["battery"]
-        electric_storage_arrays["discharging_efficiency"] = electric_vehicle_info[
-            "discharging_efficiency"
-        ]["battery"]
-        electric_storage_arrays["norm_factor"] = electric_vehicle_info[
-            "energy_capacity"
-        ]["battery"]
-
-        return electric_storage_arrays
+        return v1g_arrays
