@@ -208,7 +208,12 @@ class BuildGlobalMPC:
             )
             objectives_devices.extend(obj)
             constraints_devices.extend(cons)
-            dispatch_devices.append(disp)
+            # PV dispatch is excluded from dispatch_devices because non_controllable_loads
+            # already embeds PV generation implicitly via the net meter reading. Including
+            # PV dispatch here would cancel out with the PV already in non_controllable,
+            # making PV invisible to the optimizer with no effect on the objective.
+            if device_name != DeviceHelper.PHOTOVOLTAIC_GENERATOR.value:
+                dispatch_devices.append(disp)
 
         # Create a optimization parameter for the price
         price_parameter = cvx.Parameter(
