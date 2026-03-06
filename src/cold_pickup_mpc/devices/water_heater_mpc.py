@@ -128,11 +128,15 @@ class WaterHeaterMPC(DeviceMPC):
         constraints.append(power <= power_capacity)
 
         # Dynamics
+        # power is in kW; formula uses W-based constants (c in Wh/°C/L, V_tank in L,
+        # delta_time in h) so multiply power by 1000 to convert kW → W equivalent.
+        # water_flow is in L/h so c*water_flow has units W/°C, consistent with
+        # the 2 W/°C ambient loss coefficient and the Wh denominator.
         constraints.append(
             temperature[0, 1 : steps_horizon_k + 1]
             == temperature[0, 0:steps_horizon_k]
             + (
-                power
+                power * 1000  # kW → W equivalent for the thermal balance
                 - cvx.multiply(
                     water_heater_constant * water_flow,
                     (temperature[0, 0:steps_horizon_k] - inlet_temperature),
@@ -209,13 +213,12 @@ class WaterHeaterMPC(DeviceMPC):
                 list(water_heater_info["initial_state"].keys())[0]
             ]
         )
-        # Load power capacity
+        # Load power capacity — device config is in kW, keep kW for MPC consistency
         water_heater_arrays["power_capacity"] = float(
             water_heater_info["power_capacity"][
                 list(water_heater_info["power_capacity"].keys())[0]
             ]
-            * 1000  # Convert to W
-        )
+        )  # kW
         # Load tank_volume
         water_heater_arrays["tank_volume"] = float(
             water_heater_info["tank_volume"][
@@ -257,8 +260,8 @@ class WaterHeaterMPC(DeviceMPC):
                 )[0:steps_horizon_k]
             ).reshape(1, steps_horizon_k)
             water_heater_arrays["water_flow"] = (
-                water_flow * (1 / 1000) / 60
-            )  # Convert to m^3/s
+                water_flow * 60
+            )  # Convert L/min to L/h (matches tank_volume in L and delta_time in h)
         else:
             logger.error(
                 "start time %s not equal to the first timestamp %s in the water heater consumption preferences",

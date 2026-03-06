@@ -412,10 +412,10 @@ class LearnThermalDynamics:
         x_internal_states = np.full((thermal_zones, thermal_zones), 0.02)
         np.fill_diagonal(x_internal_states, 0.98)
 
-        u_heaters = np.full((thermal_zones, thermal_zones), 0)
+        u_heaters = np.full((thermal_zones, thermal_zones), 0.0)  # float dtype so fill_diagonal preserves 0.02
         np.fill_diagonal(u_heaters, 0.02)
 
-        w_external_variables = np.full((thermal_zones), 0)
+        w_external_variables = np.full((thermal_zones), 0.0)
 
         thermal_model = {
             "thermal_zones": thermal_zones,

@@ -267,10 +267,10 @@ class BuildGlobalMPC:
             else:
                 logger.debug("Start dates of inputs match.")
 
-                # Compute non controllable loads
+                # Compute non controllable loads — API returns W, convert to kW
                 non_controllable_loads_flat = np.array(
                     list(non_controllable_loads["forecast"].values())
-                )[0:steps_horizon_k]
+                )[0:steps_horizon_k] / 1000
                 non_controllable_loads_array = non_controllable_loads_flat.reshape(
                     (1, len(non_controllable_loads_flat))
                 )
