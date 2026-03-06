@@ -293,7 +293,7 @@ class WaterHeaterMPC(DeviceMPC):
         )  # Default: 90°C
         # Load water heater constant
         water_heater_arrays["water_heater_constant"] = float(
-            water_heater_info["max_temperature"][
+            water_heater_info["water_heater_constant"][
                 list(water_heater_info["water_heater_constant"].keys())[0]
             ]
         )  # Wh/°C/Litre

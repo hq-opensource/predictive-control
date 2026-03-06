@@ -223,8 +223,8 @@ def test_executor_mpc() -> None:
     space_heating = False
     electric_storage = False
     electric_vehicle = False
-    water_heater = False
-    photovoltaic_generator = True
+    water_heater = True
+    photovoltaic_generator = False
 
     # Create object
     executor_mpc = ExecutorMPC(
