@@ -224,27 +224,41 @@ class PhotovoltaicGeneratorMPC(DeviceMPC):
         Returns:
             A pandas DataFrame with weather data, indexed by timestamp.
         """
-        # Create a DataFrame from the weather data
-        weather_forecasts = pd.DataFrame(
-            index=pd.to_datetime(list(device_dict["ghi"].keys()))
-        )
-        weather_forecasts.index.name = "timestamp"
+        series_dict = {}
 
         # Weather variables
         try:
-            weather_forecasts["ghi"] = [float(v) for v in device_dict["ghi"].values()]
-            weather_forecasts["dhi"] = [float(v) for v in device_dict["dhi"].values()]
-            weather_forecasts["dni"] = [float(v) for v in device_dict["dni"].values()]
-            weather_forecasts["temp_air"] = [
-                float(v) for v in device_dict["temperature"].values()
-            ]
-            weather_forecasts["wind_speed"] = [
-                float(v) for v in device_dict["wind_speed"].values()
-            ]
+            for key, col_name in [("ghi", "ghi"), ("dhi", "dhi"), ("dni", "dni"), 
+                                  ("temperature", "temp_air"), ("wind_speed", "wind_speed")]:
+                if key in device_dict and device_dict[key]:
+                    series = pd.Series(device_dict[key], name=col_name)
+                    series.index = pd.to_datetime(series.index)
+                    # Convert values to float
+                    series = series.astype(float)
+                    series_dict[col_name] = series
+                else:
+                    # Provide an empty series
+                    series_dict[col_name] = pd.Series(name=col_name, dtype=float)
+
+            # Concatenate all series along columns
+            weather_forecasts = pd.concat(list(series_dict.values()), axis=1, sort=False)
+            weather_forecasts.index.name = "timestamp"
+
+            # Resample and interpolate
+            weather_forecasts = weather_forecasts.resample("10min").mean()
+            weather_forecasts[["ghi", "dhi", "dni"]] = weather_forecasts[["ghi", "dhi", "dni"]].interpolate(method="linear").fillna(0)
+            weather_forecasts[["temp_air", "wind_speed"]] = weather_forecasts[["temp_air", "wind_speed"]].interpolate(method="linear").ffill().bfill()
+
+            # Ensure the dataframe length strictly matches the MPC horizon steps
+            target_index = pd.date_range(start=start, periods=steps_horizon_k, freq="10min")
+            weather_forecasts = weather_forecasts.reindex(target_index)
+
+            # Fill any NaNs created by reindexing target_index without prior data coverage
+            weather_forecasts[["ghi", "dhi", "dni"]] = weather_forecasts[["ghi", "dhi", "dni"]].fillna(0)
+            weather_forecasts[["temp_air", "wind_speed"]] = weather_forecasts[["temp_air", "wind_speed"]].ffill().bfill()
+            weather_forecasts.index.name = "timestamp"
+
         except ValueError as e:
             raise TypeError(f"All weather values must be numeric: {e}")
-
-        # Validate the dataframe to respect the start and stop limits
-        weather_forecasts = weather_forecasts.loc[start:stop]
 
         return weather_forecasts

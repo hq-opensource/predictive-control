@@ -222,8 +222,8 @@ def test_executor_mpc() -> None:
     # Define devices to use
     space_heating = False
     electric_storage = False
-    electric_vehicle = False
-    water_heater = True
+    electric_vehicle = True
+    water_heater = False
     photovoltaic_generator = False
 
     # Create object
