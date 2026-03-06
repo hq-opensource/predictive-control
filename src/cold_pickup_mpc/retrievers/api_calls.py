@@ -91,6 +91,32 @@ def get_devices() -> Dict[str, Any]:
     return devices
 
 
+def get_ev_soc_current(device_id: str) -> float:
+    """Retrieves the current State of Charge of a V1G EV from the Core API.
+
+    This function calls the dedicated EV SoC endpoint, which reads from InfluxDB
+    (the `v1g_state_of_charge` measurement). It looks back 15 minutes for a recent
+    reading and automatically falls back to the last registered value (up to 60 days)
+    if no recent reading is available. This is more reliable than the generic
+    `/devices/state` endpoint, which reads from the Redis real-time state and may
+    return stale or uncalibrated Modbus register values.
+
+    Args:
+        device_id: The unique identifier of the EV device.
+
+    Returns:
+        The current SoC of the EV as a float (percentage, 0–100).
+
+    Raises:
+        requests.exceptions.HTTPError: If the API call fails.
+    """
+    api_url = f"{os.getenv('CORE_API_URL')}/devices/ev/soc/current/{device_id}"
+
+    response = requests.get(api_url, timeout=30)
+    response.raise_for_status()
+    return float(response.json())
+
+
 def get_device_state(device_id: str, field: str | None = None) -> float:
     """Retrieves the state of a specific device from the Core API.
 

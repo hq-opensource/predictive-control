@@ -9,7 +9,7 @@ of the CVXPY solver to determine optimal dispatch strategies.
 """
 
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import time
 from typing import Any, Dict, List, Tuple
 
@@ -144,6 +144,50 @@ class BuildGlobalMPC:
                 start, stop, price_profile, power_limit, steps_horizon_k
             )
         )
+
+        # Verify grid limits mathematically against non-controllable loads
+        if non_controllable_loads_array is not None and power_limit_array is not None:
+            violations = non_controllable_loads_array[0] - power_limit_array[0]
+            max_violation_idx = np.argmax(violations)
+            max_violation = violations[max_violation_idx]
+            
+            if max_violation > 0:
+                time_of_violation = start + timedelta(minutes=int(max_violation_idx * interval))
+                load_at_violation = non_controllable_loads_array[0, max_violation_idx]
+                limit_at_violation = power_limit_array[0, max_violation_idx]
+
+                battery_type = DeviceHelper.ELECTRIC_STORAGE.value
+                battery_active = battery_type in self.devices
+                battery_capacity = 0.0
+
+                if battery_active:
+                    all_devices = get_devices()["content"]
+                    battery_devices = DeviceHelper.get_all_device_info_by_key(all_devices, "type", battery_type)
+                    if battery_devices:
+                        battery_capacity = float(battery_devices[0].get("power_capacity", 0.0))
+
+                if not battery_active:
+                    logger.warning(
+                        "There is no battery active in the optimization problem, and the power limit "
+                        "(%.2f kW) is below the forecasted non-controllable loads (%.2f kW) at %s. "
+                        "It is impossible to solve the problem.",
+                        limit_at_violation, load_at_violation, time_of_violation.strftime('%H:%M')
+                    )
+                else:
+                    if max_violation > battery_capacity:
+                        logger.warning(
+                            "I am sorry, but considering the current power limit (%.2f kW) and the "
+                            "forecasted non-controllable loads (%.2f kW) at %s, I will not be able to solve "
+                            "the problem even using the maximum capacity of the battery (%.2f kW).",
+                            limit_at_violation, load_at_violation, time_of_violation.strftime('%H:%M'), battery_capacity
+                        )
+                    else:
+                        logger.info(
+                            "At %s, the non-controllable loads (%.2f kW) exceed the power limit (%.2f kW), "
+                            "but under current circumstances it is possible to cover the deficit using the "
+                            "battery's capacity (%.2f kW).",
+                            time_of_violation.strftime('%H:%M'), load_at_violation, limit_at_violation, battery_capacity
+                        )
 
         # Initialize devices (PV, ES, TS, EV) load objective, dispatch and constraints (only comfort terms)
         objectives_devices: List[Any] = []

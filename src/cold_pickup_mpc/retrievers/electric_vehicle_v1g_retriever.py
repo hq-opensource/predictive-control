@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Any, Dict
 
 from cold_pickup_mpc.retrievers.api_calls import (
-    get_device_state,
+    get_ev_soc_current,
     get_preferences_data,
 )
 from cold_pickup_mpc.retrievers.device_retriever import DeviceRetriever
@@ -80,11 +80,12 @@ class ElectricVehicleV1gDataRetriever(DeviceRetriever):
         for device in self._devices:
             entity_id = device.get("entity_id", "unknown")
 
-            # Build dictionary of initial states
-            # The state of charge is retrieved using the 'soc' field.
-            # If the API returns a dictionary, the retriever will return it as is, 
-            # and the MPC class will handle the extraction of the specific value.
-            initial_state[entity_id] = get_device_state(entity_id, field="soc")
+            # Build dictionary of initial states.
+            # Use the dedicated EV SoC endpoint, which reads from InfluxDB
+            # (v1g_state_of_charge measurement). This is more reliable than the
+            # generic /devices/state endpoint, which reads from the Redis real-time
+            # state and may return stale or uncalibrated Modbus register values.
+            initial_state[entity_id] = get_ev_soc_current(entity_id)
 
             # Build dictionary of setpoint preferences
             soc_preferences[entity_id] = get_preferences_data(

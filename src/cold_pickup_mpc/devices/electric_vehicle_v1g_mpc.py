@@ -180,17 +180,51 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         constraints.append(
             residual_energy <= max_residual_energy / 100 * self._energy_capacity
         )
-        constraints.append(
-            residual_energy >= min_residual_energy / 100 * self._energy_capacity
+        
+        # Soft penalty for the minimum residual energy to avoid infeasibility
+        # when native decay drives the SoC below the limit and charging is impossible.
+        min_target_wh = min_residual_energy / 100 * self._energy_capacity
+        penalty_for_constraint_violation = 10
+        min_soc_penalty = priority * penalty_for_constraint_violation * cvx.sum_squares(
+            cvx.pos(min_target_wh - residual_energy) / norm_factor
         )
+        objective.append(min_soc_penalty)
+        
         constraints.append(residual_energy[0, 0] == initial_state)
+
+        # Log maximum theoretically reachable SoC at end of horizon
+        # (assuming always connected and charging at full power capacity)
+        entity_id = self.device_dict.get("entity_id", "unknown")
+        max_reachable_wh = initial_state + self._charging_efficiency * delta_time * self._power_capacity * steps_horizon_k
+        max_reachable_soc = max_reachable_wh / self._energy_capacity * 100
+        if max_reachable_soc >= 100.0:
+            logger.info(
+                "EV %s: It is possible to fully recharge the vehicle within the optimization horizon "
+                "(max reachable SoC: %.1f%%, assuming the vehicle remains connected all the time "
+                "and charges at maximum power capacity).",
+                entity_id, max_reachable_soc,
+            )
+        else:
+            logger.warning(
+                "EV %s: Maximum theoretical reachable SoC is %.1f%%, assuming the vehicle remains "
+                "connected all the time and charges at maximum power capacity throughout the horizon. "
+                "A full recharge is not achievable in the current optimization window.",
+                entity_id, max_reachable_soc,
+            )
+
+        # Final SoC requirement as a soft penalty in the objective (instead of a hard constraint).
+        # This prevents infeasibility when the target is physically unreachable given the
+        # current initial SoC, charger power, and horizon length.
         if "final_soc_requirement" in self.device_dict:
-            constraints.append(
-                residual_energy[0, -1]
-                >= self.device_dict["final_soc_requirement"]
+            final_soc_target_wh = (
+                float(self.device_dict["final_soc_requirement"])
                 / 100
                 * self._energy_capacity
             )
+            final_soc_penalty = priority * cvx.square(
+                cvx.pos(final_soc_target_wh - residual_energy[0, -1]) / norm_factor
+            )
+            objective.append(final_soc_penalty)
 
         constraints.append(
             charge_power <= self._power_capacity
@@ -262,6 +296,13 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         # 3. Min/Max residual energy
         min_residual_energy = v1g_info["min_residual_energy"][entity_id]
         max_residual_energy = v1g_info["max_residual_energy"][entity_id]
+
+        if initial_soc < 15.0:
+            logger.warning(
+                "EV %s is reporting a suspicious initial SoC of %.1f%%. "
+                "Please verify what is happening with the SoC reading.",
+                entity_id, initial_soc,
+            )
 
         if initial_soc > max_residual_energy:
             logger.warning(
