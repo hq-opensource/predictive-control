@@ -217,8 +217,6 @@ class BuildGlobalMPC:
         price_parameter.value = price_profile_array
 
         # Compute the energy balance
-        # TODO: Juan, the forecast of the non-controllable loads is giving negative values!
-        # TODO: Juan, verify the forecast of the non-controllable loads!
         aggregated_dispatch = cvx.sum(dispatch_devices, axis=0)
         net_grid_power_exchange = aggregated_dispatch + non_controllable_loads_array
 
