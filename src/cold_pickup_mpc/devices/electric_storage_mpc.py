@@ -227,7 +227,7 @@ class ElectricStorageMPC(DeviceMPC):
                 min_residual_energy,
             )
             logger.warning("Setting min_residual_energy of the battery to zero.")
-            min_residual_energy = energy_capacity
+            min_residual_energy = initial_state
         electric_storage_arrays["min_residual_energy"] = min_residual_energy
         electric_storage_arrays["max_residual_energy"] = max_residual_energy
 
