@@ -220,10 +220,10 @@ def test_executor_mpc() -> None:
     This is primarily for testing and development purposes.
     """
     # Define devices to use
-    space_heating = False
+    space_heating = True
     electric_storage = False
     electric_vehicle = False
-    water_heater = True
+    water_heater = False
     photovoltaic_generator = False
 
     # Create object

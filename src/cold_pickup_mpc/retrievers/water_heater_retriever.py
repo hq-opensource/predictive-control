@@ -78,8 +78,9 @@ class WaterHeaterDataRetriever(DeviceRetriever):
             entity_id = device.get("entity_id", "unknown")
 
             # Build dictionary of initial states
+            print("entity_id", entity_id)
             initial_state[entity_id] = get_device_state(
-                entity_id, "water_heater_temperature"
+                entity_id, "temperature_water_heater"
             )
 
             # Build dictionary of consumption preferences
