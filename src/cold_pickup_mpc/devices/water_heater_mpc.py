@@ -7,7 +7,7 @@ a desired range and incorporating constraints such as power limits, tank volume,
 and thermal dynamics influenced by ambient temperature and water flow.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Tuple
 
 import cvxpy as cvx
@@ -77,7 +77,7 @@ class WaterHeaterMPC(DeviceMPC):
 
         # Process data as arrays
         water_heater_arrays = self._process_data_as_arrays(
-            start, water_heater_info, steps_horizon_k
+            start, water_heater_info, steps_horizon_k, interval
         )
 
         # Compute delta time
@@ -103,15 +103,29 @@ class WaterHeaterMPC(DeviceMPC):
         power = cvx.Variable(
             (1, steps_horizon_k), nonneg=True, name="water_heater_power"
         )
+        # nonneg=True is a hard physical floor (water cannot be < 0°C).
+        # This is distinct from the soft comfort lower bound (min_temperature = 30°C):
+        # the soft constraint allows slack, but temperature must remain physically valid.
         temperature = cvx.Variable(
             (1, steps_horizon_k + 1), nonneg=True, name="water_heater_temperature"
         )
 
+        # Slack variables for soft temperature bounds — guarantee feasibility when
+        # peak water draw cools the tank faster than the heater can compensate.
+        slack_above = cvx.Variable(
+            (1, steps_horizon_k + 1), nonneg=True, name="water_heater_slack_above"
+        )
+        slack_below = cvx.Variable(
+            (1, steps_horizon_k + 1), nonneg=True, name="water_heater_slack_below"
+        )
+
         # Define optimization objective
+        # 1000× penalty on slack: violations are strongly discouraged but the
+        # problem always has a feasible point even when capacity is insufficient.
         comfort_term = priority * cvx.sum(
             ((desired_state - temperature[:, :-1]) / norm_factor) ** 2
         )
-        objective = [comfort_term]
+        objective = [comfort_term + 1000 * cvx.sum(slack_above + slack_below)]
 
         # Constraints
         constraints: List[Any] = []
@@ -119,9 +133,9 @@ class WaterHeaterMPC(DeviceMPC):
         # Initial state
         constraints.append(temperature[0, 0] == initial_state)
 
-        # State limits
-        constraints.append(temperature >= min_temperature)
-        constraints.append(temperature <= max_temperature)
+        # Soft temperature bounds
+        constraints.append(temperature <= max_temperature + slack_above)
+        constraints.append(temperature >= min_temperature - slack_below)
 
         # # Binary control: power = switch * power_capacity
         # constraints.append(power[0, :] == switch * power_capacity)
@@ -164,6 +178,29 @@ class WaterHeaterMPC(DeviceMPC):
         # Dispatch
         dispatch = power
 
+        # Warn when peak water draw exceeds heater capacity so operators know
+        # the slack variables will absorb comfort violations during those steps.
+        C_th = water_heater_constant * tank_volume
+        max_heat_per_step = power_capacity * 1000 * delta_time / C_th
+        max_flow_lh = float(np.max(water_flow))
+        if max_flow_lh > 0:
+            max_cool_per_step = (
+                water_heater_constant
+                * max_flow_lh
+                * (initial_state - float(np.min(inlet_temperature)))
+                * delta_time
+                / C_th
+            )
+            if max_cool_per_step > max_heat_per_step:
+                logger.warning(
+                    "Peak water draw (%.1f L/min) cools tank at %.2f°C/step; "
+                    "heater can only add %.2f°C/step. "
+                    "Temperature comfort bound will be violated during high-draw periods.",
+                    max_flow_lh / 60,
+                    max_cool_per_step,
+                    max_heat_per_step,
+                )
+
         return objective, constraints, dispatch
 
     def _process_data_as_arrays(
@@ -171,6 +208,7 @@ class WaterHeaterMPC(DeviceMPC):
         start: datetime,
         water_heater_info: Dict[str, Any],
         steps_horizon_k: int,
+        interval: int = 10,
     ) -> Dict[str, Any]:
         """Processes raw device data into NumPy arrays for the optimization model.
 
@@ -243,31 +281,39 @@ class WaterHeaterMPC(DeviceMPC):
             (1, steps_horizon_k), ambient_temperature
         )
 
-        # Load water flow
-        # Get the first timestamp key from the nested dict
-        first_key = list(
-            list(water_heater_info["consumption_preferences"].values())[0].keys()
-        )[0]
-        # Parse the ISO 8601 timestamp string into a datetime object
-        first_datetime = datetime.fromisoformat(first_key)
-        if first_datetime == start:
-            # If the first timestamp matches the start time, use the corresponding value
-            water_flow = np.array(
-                list(
-                    water_heater_info["consumption_preferences"][
-                        list(water_heater_info["consumption_preferences"].keys())[0]
-                    ].values()
-                )[0:steps_horizon_k]
-            ).reshape(1, steps_horizon_k)
-            water_heater_arrays["water_flow"] = (
-                water_flow * 60
-            )  # Convert L/min to L/h (matches tank_volume in L and delta_time in h)
-        else:
-            logger.error(
-                "start time %s not equal to the first timestamp %s in the water heater consumption preferences",
-                start,
-                first_datetime,
+        # Load water flow — align consumption preferences to the horizon timestamps.
+        # Nearest-timestamp matching (within 1 minute) is used instead of exact
+        # equality so that minor timezone/rounding differences do not silently
+        # drop the flow data and cause a KeyError downstream.
+        wh_device_key = list(water_heater_info["consumption_preferences"].keys())[0]
+        raw_flow_dict = water_heater_info["consumption_preferences"][wh_device_key]
+        horizon_timestamps = [
+            start + timedelta(minutes=i * interval) for i in range(steps_horizon_k)
+        ]
+        flow_values = []
+        for ts in horizon_timestamps:
+            best_key = min(
+                raw_flow_dict.keys(),
+                key=lambda k: abs((datetime.fromisoformat(k) - ts).total_seconds()),
             )
+            diff_seconds = abs((datetime.fromisoformat(best_key) - ts).total_seconds())
+            if diff_seconds <= 60:
+                flow_values.append(raw_flow_dict[best_key])
+            else:
+                logger.warning(
+                    "No water flow data within 1 minute of %s (closest gap: %.0fs). Using 0.0 L/min.",
+                    ts,
+                    diff_seconds,
+                )
+                flow_values.append(0.0)
+        water_heater_arrays["water_flow"] = (
+            np.array(flow_values).reshape(1, steps_horizon_k) * 60
+        )  # Convert L/min to L/h
+
+        # Fallback: guarantee water_flow is always set even if loading failed
+        if "water_flow" not in water_heater_arrays:
+            logger.warning("water_flow could not be loaded. Defaulting to zero hot water draw.")
+            water_heater_arrays["water_flow"] = np.zeros((1, steps_horizon_k))
 
         # Check if all arrays have the same length
         if not all(

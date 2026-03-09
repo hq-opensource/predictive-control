@@ -126,7 +126,21 @@ class SpaceHeatingMPC(DeviceMPC):
         # Define weights
         weights = priorities * occupancy
 
+        # Slack variables for soft comfort constraints (always non-negative)
+        slack_above = cvx.Variable(
+            (quantity_of_thermal_zones, steps_horizon_k),
+            nonneg=True,
+            name="smart_thermostats_slack_above",
+        )
+        slack_below = cvx.Variable(
+            (quantity_of_thermal_zones, steps_horizon_k),
+            nonneg=True,
+            name="smart_thermostats_slack_below",
+        )
+
         # Define optimization objective
+        # The 1000× penalty on slack ensures comfort bounds are violated only when
+        # the thermal dynamics make a feasible trajectory impossible (e.g. bad model).
         objective = [
             cvx.sum(
                 cvx.multiply(
@@ -139,6 +153,7 @@ class SpaceHeatingMPC(DeviceMPC):
                     cvx.abs(setpoint_preferences - x_temperature) / norm_factor, weights
                 )
             )
+            + 1000 * cvx.sum(slack_above + slack_below)
         ]
 
         # Define optimization constraints
@@ -155,9 +170,10 @@ class SpaceHeatingMPC(DeviceMPC):
         # Maximum output power of the heaters measured in kWh
         constraints.append(u_heaters <= 16.0 / quantity_of_thermal_zones)
 
-        # Minimum and maximum temperature for the states
-        constraints.append(x_temperature >= min_setpoint)
-        constraints.append(x_temperature <= max_setpoint)
+        # Soft comfort bounds — slack absorbs violations instead of making the
+        # problem infeasible when the thermal model misbehaves.
+        constraints.append(x_temperature <= max_setpoint + slack_above)
+        constraints.append(x_temperature >= min_setpoint - slack_below)
 
         # Constraint of power change in one interval
         constraints.append(

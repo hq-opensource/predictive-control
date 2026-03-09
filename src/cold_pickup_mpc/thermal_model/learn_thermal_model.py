@@ -17,7 +17,9 @@ from cold_pickup_mpc.util.logging import LoggingUtil
 
 logger = LoggingUtil.get_logger(__name__)
 
-THERMAL_MODEL_SAVE_DIR = "/app/data/thermal_models"
+import pathlib
+PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent.parent
+THERMAL_MODEL_SAVE_DIR = os.getenv("THERMAL_MODEL_SAVE_DIR", str(PROJECT_ROOT / "data" / "thermal_models"))
 
 
 class LearnThermalDynamics:
@@ -128,46 +130,64 @@ class LearnThermalDynamics:
         learning_failed = False
 
         # Check if all dataframes are not empty
-        if (
-            bool(internal_states_dict)
-            and bool(control_variables_dict)
-            and bool(external_variables_dict)
-        ):
+        any_data_missing = False
+        if not internal_states_dict or any(not d for d in internal_states_dict.values()):
+            logger.warning("Internal states historic data is empty or missing.")
+            any_data_missing = True
+        
+        if not control_variables_dict or any(not d for d in control_variables_dict.values()):
+            logger.warning("Control variables historic data is empty or missing.")
+            any_data_missing = True
+            
+        if not external_variables_dict:
+            logger.warning("External variables (weather) historic data is empty.")
+            any_data_missing = True
+
+        if not any_data_missing:
             logger.info(
                 "Historic data found. Learning thermal model from historic data."
             )
-            # Process historic data
-            x_internal_states, u_control_variables, w_external_variables = (
-                self._process_dict_data_for_learning(
-                    internal_states_dict,
-                    control_variables_dict,
-                    external_variables_dict,
+            try:
+                # Process historic data
+                x_internal_states, u_control_variables, w_external_variables = (
+                    self._process_dict_data_for_learning(
+                        internal_states_dict,
+                        control_variables_dict,
+                        external_variables_dict,
+                    )
                 )
-            )
-            # Create thermal model object
-            thermal_models = ThermalModels()
+                
+                if x_internal_states.empty or u_control_variables.empty or w_external_variables.empty:
+                    logger.warning("Processed dataframes are empty. Cannot learn thermal model.")
+                    learning_failed = True
+                else:
+                    # Create thermal model object
+                    thermal_models = ThermalModels()
 
-            # Execute learning of thermal model
-            user_thermal_model = thermal_models.learn_black_model(
-                x_internal_states, u_control_variables, w_external_variables
-            )
+                    # Execute learning of thermal model
+                    user_thermal_model = thermal_models.learn_black_model(
+                        x_internal_states, u_control_variables, w_external_variables
+                    )
 
-            # Create the RC model only if the results exist
-            if user_thermal_model is None:
-                logger.warning(
-                    "Learners tried to solve the optimization problem and found an error."
-                )
+                    # Create the RC model only if the results exist
+                    if user_thermal_model is None:
+                        logger.warning(
+                            "Learners tried to solve the optimization problem and found an error."
+                        )
+                        learning_failed = True
+                    else:
+                        zones = x_internal_states.shape[1]
+                        thermal_model_dict = {
+                            "thermal_zones": zones,
+                            "x_internal_states": user_thermal_model["Ax"],
+                            "u_heaters": user_thermal_model["Au"],
+                            "w_external_variables": user_thermal_model["Aw"],
+                            "saved_date": datetime.now().astimezone().isoformat(),
+                        }
+                        self._save_thermal_model_to_json(thermal_model_dict)
+            except Exception as e:
+                logger.error("An unexpected error occurred during thermal learning: %s", str(e))
                 learning_failed = True
-            else:
-                zones = x_internal_states.shape[1]
-                thermal_model_dict = {
-                    "thermal_zones": zones,
-                    "x_internal_states": user_thermal_model["Ax"],
-                    "u_heaters": user_thermal_model["Au"],
-                    "w_external_variables": user_thermal_model["Aw"],
-                    "saved_date": datetime.now().astimezone().isoformat(),
-                }
-                self._save_thermal_model_to_json(thermal_model_dict)
         else:
             logger.warning(
                 "Skipping the learning of the thermal models due to lack of historic data."
@@ -409,13 +429,17 @@ class LearnThermalDynamics:
             )
             return self._load_thermal_model_from_json()
 
-        x_internal_states = np.full((thermal_zones, thermal_zones), 0.02)
-        np.fill_diagonal(x_internal_states, 0.98)
+        # Stable diagonal model: each zone retains 98% of its heat per step.
+        # Off-diagonal coupling is intentionally omitted so the row sum stays
+        # below 1.0 (spectral radius < 1 → stable dynamics).
+        x_internal_states = np.eye(thermal_zones) * 0.98
 
-        u_heaters = np.full((thermal_zones, thermal_zones), 0.0)  # float dtype so fill_diagonal preserves 0.02
+        u_heaters = np.full((thermal_zones, thermal_zones), 0.0)
         np.fill_diagonal(u_heaters, 0.02)
 
-        w_external_variables = np.full((thermal_zones), 0.0)
+        # Non-zero outdoor coupling: each degree of outdoor temperature
+        # contributes ~2% per step, giving the model a natural heat sink.
+        w_external_variables = np.full((thermal_zones, 1), 0.02)
 
         thermal_model = {
             "thermal_zones": thermal_zones,

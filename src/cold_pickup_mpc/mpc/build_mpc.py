@@ -246,7 +246,17 @@ class BuildGlobalMPC:
                 "Because there is only PV, there is no possibility of limiting the power under certain value."
             )
         else:
-            global_mpc_constraints.append(net_grid_power_exchange <= power_limit_array)
+            # Soft power-limit constraint: a slack variable absorbs violations
+            # (e.g. when non-controllable loads alone already exceed the limit).
+            # The 10000× penalty makes the optimizer avoid violations strongly
+            # while guaranteeing the problem always has a feasible point.
+            slack_power = cvx.Variable(
+                (1, steps_horizon_k), nonneg=True, name="slack_power_limit"
+            )
+            global_mpc_objective += 10000 * cvx.sum(slack_power)
+            global_mpc_constraints.append(
+                net_grid_power_exchange <= power_limit_array + slack_power
+            )
 
         # Build the optimization problem
         global_mpc_problem = cvx.Problem(

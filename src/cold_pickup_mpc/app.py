@@ -236,7 +236,7 @@ def test_executor_mpc() -> None:
     )
 
     # Time settings
-    optimization_hours = 6
+    optimization_hours = 4
     # Use current time rounded up to the next 10-minute interval
     now = datetime.now().astimezone()
     minutes_to_add = 20 - (now.minute % 10)
