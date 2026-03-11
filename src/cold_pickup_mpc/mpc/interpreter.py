@@ -280,8 +280,8 @@ class Interpreter:
         """
 
         # Build columns for the dataframes
-        wh_power = ["wh_power"]  # 0-100%
-        wh_temperature = ["wh_temperature"]  # kWh
+        wh_power = ["power"]  # 0-100%
+        wh_temperature = ["temperature"]  # kWh
 
         # Build index
         date_range = pd.date_range(
@@ -321,6 +321,7 @@ class Interpreter:
             index=date_range,
         )
         return results_water_heater, control_water_heater
+    
     def load_electric_vehicle_variables(
         self,
         global_mpc_problem: Problem,
@@ -348,7 +349,7 @@ class Interpreter:
         # Build columns for the dataframes
         state_of_charge = ["state_of_charge"]  # 0-100%
         residual_energy = ["residual_energy"]  # Wh
-        charge_power = ["charge_power"]  # kW
+        charge_power = ["power"]  # kW
 
         # Build index
         date_range = pd.date_range(
@@ -411,7 +412,6 @@ class Interpreter:
 
         return results_electric_vehicle, control_electric_vehicle
 
-
     def load_electric_storage_variables(
         self,
         global_mpc_problem: Problem,
@@ -440,7 +440,7 @@ class Interpreter:
         # Build columns for the dataframes
         state_of_charge = ["state_of_charge"]  # 0-100%
         residual_energy = ["residual_energy"]  # kWh
-        battery_power = ["battery_power"]  # Net power in kW
+        battery_power = ["power"]  # Net power in kW
         charge_power = ["charge_power"]  # Charge power in kW
         discharge_power = ["discharge_power"]  # Discharge power in kW
 
