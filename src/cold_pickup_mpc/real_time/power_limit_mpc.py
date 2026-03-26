@@ -16,10 +16,6 @@ from typing import Any, Dict
 
 from cold_pickup_mpc.devices.api_calls import retrieve_total_consumption, write_setpoint
 from cold_pickup_mpc.devices.helper import DeviceHelper
-from cold_pickup_mpc.retrievers.api_calls import (
-    retrieve_total_consumption,
-    write_setpoint,
-)
 from cold_pickup_mpc.util.logging import LoggingUtil
 
 logger = LoggingUtil.get_logger(__name__)
@@ -143,7 +139,7 @@ class RealTimeControl(threading.Thread):
         logger.info(
             "Real-Time Control current power limit: %.2f kW", current_power_limit
         )
-        security_limit = float(os.getenv("SECURITY_LIMIT", "0,5"))
+        security_limit = float(os.getenv("SECURITY_LIMIT", "0.5"))
         if current_power_limit < security_limit:
             threshold = current_power_limit
         else:
@@ -301,7 +297,7 @@ class RealTimeControl(threading.Thread):
         first_limit = min(self.power_limit.keys())
 
         # Check if we are before/after limits
-        if last_limit < timestamp < first_limit:
+        if timestamp < first_limit or timestamp > last_limit:
             return None
 
         applicable_times = [t for t in self.power_limit.keys() if t <= timestamp]
