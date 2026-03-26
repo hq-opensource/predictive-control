@@ -89,7 +89,7 @@ def _mpc_job(
     """
     logger.info("Running MPC job")
     executor = ExecutorMPC(
-        space_heating, electric_storage, electric_vehicle, water_heater
+        space_heating, electric_storage, electric_vehicle, water_heater, False
     )
 
     global_mpc_problem, net_grid_power_exchange = executor.run_mpc(
@@ -106,6 +106,8 @@ def _mpc_job(
         electric_storage,
         electric_vehicle,
         water_heater,
+        prices,
+        power_limit,
     )
     post_controls_schedule(controls)
 
@@ -268,6 +270,8 @@ def test_executor_mpc() -> None:
         electric_storage,
         electric_vehicle,
         water_heater,
+        price_profile,
+        power_limit,
     )
     post_controls_schedule(controls)
     logger.info("MPC job completed successfully, controls posted to the schedule.")

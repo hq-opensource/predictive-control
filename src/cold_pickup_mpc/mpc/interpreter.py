@@ -53,6 +53,8 @@ class Interpreter:
         electric_storage: bool,
         electric_vehicle: bool,
         water_heater: bool,
+        price_profile: Dict[datetime, float] = None,
+        power_limit: Dict[datetime, float] = None,
     ) -> pd.DataFrame:
         """Interprets the results of the global MPC problem and saves them.
 
@@ -200,7 +202,61 @@ class Interpreter:
                 data, bucket, DeviceHelper.WATER_HEATER.value, write_api
             )
 
+        # Save metadata (power limit and price profile) to InfluxDB
+        if price_profile and power_limit:
+            self.save_metadata_to_influxdb(
+                price_profile, power_limit, influxdb_mapping, write_api
+            )
+
         return controls
+
+    def save_metadata_to_influxdb(
+        self,
+        price_profile: Dict[datetime, float],
+        power_limit: Dict[datetime, float],
+        influxdb_mapping: Dict[str, Any],
+        write_api: WriteApi,
+    ) -> None:
+        """Saves optimization constraints (price and power limit) to InfluxDB.
+
+        This metadata is essential for analyzing the optimizer's behavior,
+        as it allows users to see the constraints that were active during
+        a specific optimization run.
+
+        Args:
+            price_profile: The dictionary of electricity prices used.
+            power_limit: The dictionary of grid power limits used.
+            influxdb_mapping: The mapping configuration for InfluxDB.
+            write_api: The InfluxDB write client.
+        """
+        data = []
+        # Use a generic bucket for metadata if not specified, or pick one from mapping
+        # Here we'll use the 'sh_power' bucket as a default location for MEEB2
+        bucket = influxdb_mapping.get("sh_power", {}).get("bucket", "MEEB2")
+
+        for timestamp, price in price_profile.items():
+            if timestamp < self.stop: # Only save up to the horizon end
+                data.append({
+                    "measurement": "mpc_constraints",
+                    "tags": {"_type": "mpc_metadata", "constraint": "electricity_price"},
+                    "time": timestamp,
+                    "fields": {"value": float(price)}
+                })
+        
+        for timestamp, limit in power_limit.items():
+            if timestamp < self.stop:
+                data.append({
+                    "measurement": "mpc_constraints",
+                    "tags": {"_type": "mpc_metadata", "constraint": "grid_power_limit"},
+                    "time": timestamp,
+                    "fields": {"value": float(limit)}
+                })
+
+        try:
+            write_api.write(bucket=bucket, record=data)
+            logger.info("Optimization constraints successfully saved to InfluxDB.")
+        except Exception as e:
+            logger.error("Failed to save mpc metadata to InfluxDB: %s", str(e))
 
     def convert_results_to_list(self, results: pd.DataFrame, measurement: str) -> List:
         """Converts a Pandas DataFrame of optimization results into a list of dictionaries.
