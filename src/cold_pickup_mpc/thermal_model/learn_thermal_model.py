@@ -176,12 +176,57 @@ class LearnThermalDynamics:
                         )
                         learning_failed = True
                     else:
-                        zones = x_internal_states.shape[1]
+                        # Get canonical zone order (matches MPC ordering)
+                        all_sh_devices = DeviceHelper.sort_devices_by_priorities(
+                            space_heating=True,
+                            electric_storage=False,
+                            electric_vehicle=False,
+                            water_heater=False,
+                        )
+                        all_eids = [d["entity_id"] for d in all_sh_devices]
+                        learned_eids = list(x_internal_states.columns)
+                        n_total = len(all_eids)
+                        n_learned = len(learned_eids)
+
+                        Ax_l = np.array(user_thermal_model["Ax"])
+                        Au_l = np.array(user_thermal_model["Au"])
+                        Aw_l = np.array(user_thermal_model["Aw"])
+
+                        if n_learned < n_total:
+                            # Pad missing zones with default diagonal values so
+                            # the model always matches the full set of MPC zones.
+                            missing = set(all_eids) - set(learned_eids)
+                            logger.warning(
+                                "Padding thermal model with default values for %d missing zone(s): %s",
+                                len(missing), missing,
+                            )
+                            Ax_full = np.eye(n_total) * 0.98
+                            Au_full = np.eye(n_total) * 0.02
+                            Aw_full = np.full((n_total, 1), 0.02)
+                            for i, eid_i in enumerate(all_eids):
+                                if eid_i not in learned_eids:
+                                    continue
+                                li = learned_eids.index(eid_i)
+                                Aw_full[i] = Aw_l[li]
+                                for j, eid_j in enumerate(all_eids):
+                                    if eid_j not in learned_eids:
+                                        continue
+                                    lj = learned_eids.index(eid_j)
+                                    Ax_full[i, j] = Ax_l[li, lj]
+                                    Au_full[i, j] = Au_l[li, lj]
+                            Ax_save = Ax_full.tolist()
+                            Au_save = Au_full.tolist()
+                            Aw_save = Aw_full.tolist()
+                        else:
+                            Ax_save = Ax_l.tolist()
+                            Au_save = Au_l.tolist()
+                            Aw_save = Aw_l.tolist()
+
                         thermal_model_dict = {
-                            "thermal_zones": zones,
-                            "x_internal_states": user_thermal_model["Ax"],
-                            "u_heaters": user_thermal_model["Au"],
-                            "w_external_variables": user_thermal_model["Aw"],
+                            "thermal_zones": n_total,
+                            "x_internal_states": Ax_save,
+                            "u_heaters": Au_save,
+                            "w_external_variables": Aw_save,
                             "saved_date": datetime.now().astimezone().isoformat(),
                         }
                         self._save_thermal_model_to_json(thermal_model_dict)
@@ -259,11 +304,25 @@ class LearnThermalDynamics:
                 device_id=device_dict["entity_id"],
             )
 
+        # Filter out devices that are missing data in either temperature or consumption.
+        # A single device with no data must not abort learning for all other zones.
+        valid_devices = {
+            eid for eid in tz_temperature
+            if tz_temperature.get(eid) and tz_electric_consumption.get(eid)
+        }
+        skipped = set(tz_temperature.keys()) - valid_devices
+        if skipped:
+            logger.warning(
+                "Skipping %d device(s) with missing historic data: %s",
+                len(skipped),
+                skipped,
+            )
+
         # Retrieve internal states (temperature)
-        internal_states_dict = tz_temperature
+        internal_states_dict = {k: v for k, v in tz_temperature.items() if k in valid_devices}
 
         # Retrieve control variables
-        control_variables_dict = tz_electric_consumption
+        control_variables_dict = {k: v for k, v in tz_electric_consumption.items() if k in valid_devices}
 
         # Retrieve external variables (weather)
         external_variables_dict = get_weather_historic("temperature", start, stop)
@@ -307,12 +366,12 @@ class LearnThermalDynamics:
         )
         u_control_variables_df.index = to_datetime(u_control_variables_df.index)
         u_control_variables_df = u_control_variables_df.tz_convert(time_zone)
-        u_control_variables_df_neg = (
-            u_control_variables_df * -1 / 1000
-        )  # Positive consumption and change for kW
-        u_control_variables_df_tz = u_control_variables_df_neg.clip(
-            lower=0
-        )  # Delete negative values
+        # All eGauge PPSR channels write to InfluxDB in Watts (scale=1.0,
+        # no per-channel conversion in the Telegraf modbus_processor).
+        # Divide uniformly by 1000 to get kW for the MPC.
+        # Clip to [0, 10] to remove sensor glitches (e.g. cuisine/salle_manger
+        # spikes reaching hundreds of apparent Watts due to measurement noise).
+        u_control_variables_df_tz = (u_control_variables_df / 1000.0).clip(lower=0, upper=10.0)
 
         # Prepare external variables
         w_external_variables_df = DataFrame.from_dict(

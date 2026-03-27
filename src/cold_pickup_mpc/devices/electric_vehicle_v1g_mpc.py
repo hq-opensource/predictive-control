@@ -49,8 +49,8 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         # Extract info of the unique device (current implementation handles one EV)
         device_dict = devices[0]
         self.device_dict = device_dict
-        self._energy_capacity = float(device_dict["energy_capacity"])  # Wh
-        self._power_capacity = float(device_dict["power_capacity"])  # W
+        self._energy_capacity = float(device_dict["energy_capacity"])  # kWh
+        self._power_capacity = float(device_dict["power_capacity"])  # kW
         self._charging_efficiency = float(device_dict.get("charging_efficiency") or 0.99)
         self._min_residual_energy = float(
             device_dict.get("min_residual_energy") or 25)  # %
@@ -113,7 +113,7 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         decay_factor = v1g_arrays["decay_factor"]
 
         logger.debug(f"Creating EV MPC formulation: {start} to {stop}, interval={interval}min")
-        logger.debug(f"EV parameters: capacity={self._energy_capacity}Wh, power={self._power_capacity}W")
+        logger.debug(f"EV parameters: capacity={self._energy_capacity}kWh, power={self._power_capacity}kW")
         logger.debug(f"Ramping enabled: {self._enable_ramping}, max_ramp_rate: {self._max_power_ramp_rate}")
 
         delta_time = 1 / (60 / interval)
@@ -128,7 +128,7 @@ class ElectricVehicleV1GMPC(DeviceMPC):
             raise ValueError("branched_profile must contain only 0s and 1s.")
         if initial_state < 0 or initial_state > self._energy_capacity:
             logger.error(f"initial_state {initial_state} is outside valid range [0, {self._energy_capacity}]")
-            raise ValueError(f"initial_state must be between 0 and {self._energy_capacity} Wh.")
+            raise ValueError(f"initial_state must be between 0 and {self._energy_capacity} kWh.")
 
         # Define optimization variables
         switch = cvx.Variable(
@@ -148,12 +148,12 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         norm_factor = float(
             self.device_dict.get("norm_factor", self._energy_capacity)
         )  # The use of residual energy allows to use capacity as normalization factor
-        desired_soc = (
+        desired_state_kwh = (
             float(self.device_dict.get("desired_state") or 90)
             / 100
             * self._energy_capacity
         )
-        desired_state = desired_soc * np.ones((1, steps_horizon_k))
+        desired_state = desired_state_kwh * np.ones((1, steps_horizon_k))
         comfort_term = priority * cvx.sum_squares(
             (desired_state - residual_energy[:, :-1]) / norm_factor
         )
@@ -183,10 +183,10 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         
         # Soft penalty for the minimum residual energy to avoid infeasibility
         # when native decay drives the SoC below the limit and charging is impossible.
-        min_target_wh = min_residual_energy / 100 * self._energy_capacity
+        min_target_kwh = min_residual_energy / 100 * self._energy_capacity
         penalty_for_constraint_violation = 10
         min_soc_penalty = priority * penalty_for_constraint_violation * cvx.sum_squares(
-            cvx.pos(min_target_wh - residual_energy) / norm_factor
+            cvx.pos(min_target_kwh - residual_energy) / norm_factor
         )
         objective.append(min_soc_penalty)
         
@@ -195,8 +195,8 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         # Log maximum theoretically reachable SoC at end of horizon
         # (assuming always connected and charging at full power capacity)
         entity_id = self.device_dict.get("entity_id", "unknown")
-        max_reachable_wh = initial_state + self._charging_efficiency * delta_time * self._power_capacity * steps_horizon_k
-        max_reachable_soc = max_reachable_wh / self._energy_capacity * 100
+        max_reachable_kwh = initial_state + self._charging_efficiency * delta_time * self._power_capacity * steps_horizon_k
+        max_reachable_soc = max_reachable_kwh / self._energy_capacity * 100
         if max_reachable_soc >= 100.0:
             logger.info(
                 "EV %s: It is possible to fully recharge the vehicle within the optimization horizon "
@@ -216,13 +216,13 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         # This prevents infeasibility when the target is physically unreachable given the
         # current initial SoC, charger power, and horizon length.
         if "final_soc_requirement" in self.device_dict:
-            final_soc_target_wh = (
+            final_soc_target_kwh = (
                 float(self.device_dict["final_soc_requirement"])
                 / 100
                 * self._energy_capacity
             )
             final_soc_penalty = priority * cvx.square(
-                cvx.pos(final_soc_target_wh - residual_energy[0, -1]) / norm_factor
+                cvx.pos(final_soc_target_kwh - residual_energy[0, -1]) / norm_factor
             )
             objective.append(final_soc_penalty)
 
@@ -290,8 +290,8 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         else:
             initial_soc = raw_initial_state
             
-        initial_state_wh = (initial_soc / 100 * energy_capacity)
-        v1g_arrays["initial_state"] = initial_state_wh
+        initial_state_kwh = (initial_soc / 100 * energy_capacity)
+        v1g_arrays["initial_state"] = initial_state_kwh
 
         # 3. Min/Max residual energy
         min_residual_energy = v1g_info["min_residual_energy"][entity_id]

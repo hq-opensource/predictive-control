@@ -22,6 +22,7 @@ from influxdb_client import InfluxDBClient, WriteApi
 from influxdb_client.client.write_api import SYNCHRONOUS
 
 from cold_pickup_mpc.devices.helper import DeviceHelper
+from cold_pickup_mpc.retrievers.api_calls import get_preferences_data
 from cold_pickup_mpc.util.logging import LoggingUtil
 
 logger = LoggingUtil.get_logger(__name__)
@@ -614,6 +615,9 @@ class Interpreter:
         setpoint_columns = [
             "setpoint_" + entity_id for entity_id in thermal_zones_ordered
         ]
+        temperature_columns = [
+            "temperature_" + entity_id for entity_id in thermal_zones_ordered
+        ]
         power_columns = ["power_" + entity_id for entity_id in thermal_zones_ordered]
 
         # Build index
@@ -640,8 +644,43 @@ class Interpreter:
                     data=var_array, columns=setpoint_columns, index=date_range
                 )
 
+        # Also store predicted temperatures under temperature_ prefix so they can be
+        # plotted alongside measured temperature in InfluxDB for visual model validation.
+        temperature_df = states_df.rename(
+            columns=dict(zip(setpoint_columns, temperature_columns))
+        )
+
+        # Fetch user setpoint preferences for the optimization horizon and store them
+        # under the preference_ prefix so they can be overlaid in InfluxDB dashboards.
+        preference_columns = [
+            "preference_" + entity_id for entity_id in thermal_zones_ordered
+        ]
+        preference_df = pd.DataFrame(index=date_range, columns=preference_columns,
+                                     dtype=float)
+        for zone, pref_col in zip(thermal_zones_ordered, preference_columns):
+            try:
+                raw = get_preferences_data(
+                    preferences_type="setpoint-preferences",
+                    device_id=zone,
+                    start=self.start,
+                    stop=self.stop,
+                )
+                if raw:
+                    # raw is a dict {iso_timestamp: value} — align to date_range
+                    pref_series = pd.Series(
+                        {pd.Timestamp(k): v for k, v in raw.items()},
+                        dtype=float,
+                    )
+                    preference_df[pref_col] = pref_series.reindex(
+                        date_range, method="nearest", tolerance=pd.Timedelta("1min")
+                    )
+            except Exception:
+                pass  # missing preference data → column stays NaN, no write
+
         # Create the final DataFrame
-        results_space_heating = pd.concat([control_df, states_df], axis=1)
+        results_space_heating = pd.concat(
+            [control_df, states_df, temperature_df, preference_df], axis=1
+        )
         columns = [entity_id for entity_id in thermal_zones_ordered]
         values = []
         for name in range(len(columns)):

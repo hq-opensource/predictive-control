@@ -62,7 +62,24 @@ The `predictive_control` package provides the implementation for the grid servic
     cp .env.example .env # If available, or manually create one
     ```
 
-2.  **Run the application:**
+2.  **Manage the virtual environment:**
+    When opening a terminal in VS Code, another environment may already be active (e.g., a conda base environment or a previously selected interpreter). You should deactivate it first, then activate the project's environment created by `uv sync`.
+
+    *   **Deactivate** any currently active environment:
+        ```bash
+        deactivate
+        ```
+        > If you are using conda, run `conda deactivate` instead.
+
+    *   **Activate** the project's virtual environment:
+        ```bash
+        source .venv/bin/activate
+        ```
+        > On Windows, use `.venv\Scripts\activate` instead.
+
+    Once activated, your terminal prompt will be prefixed with `(.venv)`, confirming the correct environment is in use.
+
+3.  **Run the application:**
     ```bash
     uv run python -m cold_pickup_mpc.app
     ```

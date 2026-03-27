@@ -168,7 +168,7 @@ class SpaceHeatingMPC(DeviceMPC):
         # constraints.append(x_temperature[:, -1] == setpoint_preferences[:, -1])
 
         # Maximum output power of the heaters measured in kWh
-        constraints.append(u_heaters <= 16.0 / quantity_of_thermal_zones)
+        constraints.append(u_heaters <= 20.0 / quantity_of_thermal_zones)
 
         # Soft comfort bounds — slack absorbs violations instead of making the
         # problem infeasible when the thermal model misbehaves.
@@ -250,14 +250,14 @@ class SpaceHeatingMPC(DeviceMPC):
 
             if state < min_val:
                 logger.warning(
-                    "Initial state for %s (%s) is lower than the minimum setpoint (%s). The minimum setpoint will be reduced to zero.",
+                    "Initial state for %s (%.1f°C) is lower than the minimum setpoint (%.1f°C). "
+                    "The soft constraint will absorb the initial violation; the optimizer will heat "
+                    "from the next step onward to restore the floor.",
                     room,
                     state,
                     min_val,
                 )
-                min_setpoint[room] = 0
-            else:
-                min_setpoint[room] = min_val
+            min_setpoint[room] = min_val
 
             if state > max_val:
                 logger.warning(

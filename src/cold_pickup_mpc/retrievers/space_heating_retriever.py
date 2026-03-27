@@ -111,34 +111,26 @@ class SpaceHeatingDataRetriever(DeviceRetriever):
         data["occupancy_preferences"] = occupancy_preferences
 
         # Save thermal model
-        data["thermal_model"] = self._learn_thermal_model(days_in_the_past=1)
+        data["thermal_model"] = self._learn_thermal_model()
 
         # Save weather forecast
         data["weather_forecast"] = weather_forecast
 
         return data
 
-    def _learn_thermal_model(self, days_in_the_past: int) -> Dict[str, Any]:
+    def _learn_thermal_model(self) -> Dict[str, Any]:
         """Learns or validates the thermal model for the space heating zones.
 
-        This method initiates the process of learning a thermal dynamics model
-        for the building's thermal zones based on historical data. The model
-        is crucial for predicting indoor temperature changes in the MPC.
-
-        Args:
-            days_in_the_past: The number of past days to consider for learning
-                              the thermal model.
+        Uses a fixed high-quality training window (Jan 6–27 2026) where all
+        zone power sensors have complete data at 10-second resolution.
+        The core-api automatically resamples this to 10-minute intervals.
 
         Returns:
             A dictionary containing the learned or validated thermal model parameters.
         """
-        # Learning the thermal model takes time. Where to execute this? As a schedule?
-        start = datetime.now().astimezone() - timedelta(days=days_in_the_past)
-        stop = (
-            datetime.now()
-            .astimezone()
-            .replace(hour=0, minute=0, second=0, microsecond=0)
-        )
+        from datetime import timezone
+        start = datetime(2026, 1, 6,  0, 0, 0, tzinfo=timezone.utc)
+        stop  = datetime(2026, 1, 27, 23, 59, 59, tzinfo=timezone.utc)
         learn_thermal_dynamics = LearnThermalDynamics()
         thermal_model = learn_thermal_dynamics.validate_or_learn_model(start, stop)
         return thermal_model
