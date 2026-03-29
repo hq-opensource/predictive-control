@@ -19,7 +19,7 @@ not_controllable_loads:
 eb_net_power: 
   bucket: "MEEB2"
   measurement: "electric_battery"
-  field: "battery_power"
+  field: "power"
   tags: {}
 eb_charge_power: 
   bucket: "MEEB2"

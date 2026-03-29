@@ -50,7 +50,10 @@ class ElectricStorageDataRetriever(DeviceRetriever):
             "charging_efficiency": {"type": float, "default": 0.98},
             "discharging_efficiency": {"type": float, "default": 0.98},
             "min_residual_energy": {"type": float, "default": 30},
-            "max_residual_energy": {"type": float, "default": 95},
+            # Hard upper SoC limit — the Schneider XW502/XW503 inverter ignores external
+            # charge setpoints above ~86% SoC (absorption/CV phase). Keeping the MPC at
+            # 85% ensures every charge command it generates is actually applied by the hardware.
+            "max_residual_energy": {"type": float, "default": 85},
             "decay_factor": {"type": float, "default": 0.995},
         }
 
