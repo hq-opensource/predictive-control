@@ -125,7 +125,17 @@ class ElectricStorageMPC(DeviceMPC):
         comfort_term = priority * cvx.sum(
             ((desired_state_array - residual_energy[:, :-1]) / norm_factor) ** 2
         )
-        objective = [comfort_term]
+        # Throughput penalty: a small cost on total charge + discharge energy to prevent
+        # the solver from simultaneously charging and discharging the battery.
+        # When the battery is at the desired SoC the comfort term is zero, leaving the
+        # problem underdetermined — infinitely many (P_c, P_d) pairs satisfy the energy
+        # balance with the same objective value.  Without this term the solver picks an
+        # arbitrary feasible point, which often involves needless cycling that wastes
+        # energy through efficiency losses.  The coefficient 1e-4 is ~100× smaller than
+        # the comfort gradient for a 0.5 kWh SoC deviation, so it does not materially
+        # affect the charging trajectory; it only breaks the degeneracy at steady state.
+        throughput_penalty = 1e-4 * cvx.sum(charge_power + discharge_power)
+        objective = [comfort_term + throughput_penalty]
 
         # Define optimization constraints
         constraints: List = []

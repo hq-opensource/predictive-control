@@ -141,6 +141,9 @@ class WaterHeaterMPC(DeviceMPC):
         # constraints.append(power[0, :] == switch * power_capacity)
         constraints.append(power <= power_capacity)
 
+        # Define ambient heat-loss conductance measured in W/°C
+        ambient_heat_loss_conductance = 1.5 # W/°C
+        
         # Dynamics
         # power is in kW; formula uses W-based constants (c in Wh/°C/L, V_tank in L,
         # delta_time in h) so multiply power by 1000 to convert kW → W equivalent.
@@ -155,25 +158,11 @@ class WaterHeaterMPC(DeviceMPC):
                     water_heater_constant * water_flow,
                     (temperature[0, 0:steps_horizon_k] - inlet_temperature),
                 )
-                - (temperature[0, 0:steps_horizon_k] - ambient_temperature) * 2
+                - (temperature[0, 0:steps_horizon_k] - ambient_temperature) * ambient_heat_loss_conductance
             )
             * delta_time
             / (water_heater_constant * tank_volume)
         )
-
-        # # Dynamics
-        # constraints.append(
-        #     temperature[0, 1 : steps_horizon_k + 1]
-        #     == temperature[0, 0:steps_horizon_k]
-        #     + (
-        #         (power / thermal_capacitance)
-        #         + (thermal_conductance / thermal_capacitance)
-        #         * (ambient_temperature - temperature[0, 0:steps_horizon_k])
-        #         - cvx.multiply((water_flow / tank_volume), (temperature[0, 0:steps_horizon_k] - inlet_temperature))
-        #     )
-        #     * delta_time
-        #     * 3600  # Convert hours to seconds for J/K consistency
-        # )
 
         # Dispatch
         dispatch = power

@@ -125,6 +125,11 @@ class Interpreter:
             # Create control
             controls = pd.concat([controls, control_space_heating], axis=1)
 
+            # Convert to Watts for InfluxDB ONLY
+            for col in results_space_heating.columns:
+                if col.startswith("power_"):
+                    results_space_heating[col] *= 1000
+
             # Save results to InfluxDB
             measurement = influxdb_mapping["sh_power"]["measurement"]
             data = self.convert_results_to_list(results_space_heating, measurement)
@@ -147,6 +152,10 @@ class Interpreter:
                 )
             # Create control
             controls = pd.concat([controls, control_electric_vehicle], axis=1)
+
+            # Convert to Watts for InfluxDB ONLY
+            if "power" in results_electric_vehicle.columns:
+                results_electric_vehicle["power"] *= 1000
 
             # Save results to InfluxDB
             measurement = influxdb_mapping["v1g_net_power"]["measurement"]
@@ -171,6 +180,11 @@ class Interpreter:
             # Create control
             controls = pd.concat([controls, control_electric_storage], axis=1)
 
+            # Convert to Watts for InfluxDB ONLY
+            for col in ["power", "charge_power", "discharge_power"]:
+                if col in results_electric_storage.columns:
+                    results_electric_storage[col] *= 1000
+
             # Save results to InfluxDB
             measurement = influxdb_mapping["eb_net_power"]["measurement"]
             data = self.convert_results_to_list(results_electric_storage, measurement)
@@ -194,6 +208,10 @@ class Interpreter:
                 )
             # Create control
             controls = pd.concat([controls, control_water_heater], axis=1)
+
+            # Convert to Watts for InfluxDB ONLY
+            if "power" in results_water_heater.columns:
+                results_water_heater["power"] *= 1000
 
             # Save results to InfluxDB
             measurement = influxdb_mapping["wh_power"]["measurement"]

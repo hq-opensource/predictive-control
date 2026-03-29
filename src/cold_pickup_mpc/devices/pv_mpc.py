@@ -178,7 +178,7 @@ class PhotovoltaicGeneratorMPC(DeviceMPC):
                     "measurement": "photovoltaic_generator",
                     "tags": {"_type": "mpc_results"},
                     "time": timestamps[point],
-                    "fields": {"power": float(pv_dispatch[0, point])},
+                    "fields": {"power": float(pv_dispatch[0, point] * 1000)},  # Store in W
                 }
                 generation_to_save.append(value_point)
 
