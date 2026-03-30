@@ -98,7 +98,6 @@ def _mpc_job(
 
     logger.info("MPC completed successfully")
 
-    # TODO: Juan, add the PV to the interpreter?
     interpreter = Interpreter(start, stop)
     controls = interpreter.interpret(
         global_mpc_problem,
