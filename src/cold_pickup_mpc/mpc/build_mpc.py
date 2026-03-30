@@ -305,46 +305,61 @@ class BuildGlobalMPC:
         )
 
         # Check if the inputs match the expected length
-        if (
-            len(price_profile)
-            == len(power_limit)
-            == len(non_controllable_loads["forecast"])
-        ):
-            price_start_date = list(price_profile.keys())[0]
-            power_limit_start_date = list(power_limit.keys())[0]
-            non_controllable_loads_start_date = datetime.fromisoformat(
-                list(non_controllable_loads["forecast"].keys())[0]
+        len_price = len(price_profile)
+        len_power = len(power_limit)
+        len_ncl = len(non_controllable_loads["forecast"])
+
+        if len_price != len_power or len_price != len_ncl:
+            logger.warning(
+                "Input lengths do not match: price_profile=%d, power_limit=%d, "
+                "non_controllable_loads=%d, expected steps=%d. "
+                "Trimming all inputs to the shortest common length.",
+                len_price, len_power, len_ncl, steps_horizon_k,
             )
 
-            if (
-                price_start_date != power_limit_start_date
-                or price_start_date != non_controllable_loads_start_date
-            ):
-                logger.error("Start dates of inputs do not match.")
-            else:
-                logger.debug("Start dates of inputs match.")
+        # Use the minimum of all lengths and the expected horizon
+        common_length = min(len_price, len_power, len_ncl, steps_horizon_k)
 
-                # Compute non controllable loads — API returns W, convert to kW
-                non_controllable_loads_flat = np.array(
-                    list(non_controllable_loads["forecast"].values())
-                )[0:steps_horizon_k] / 1000
-                non_controllable_loads_array = non_controllable_loads_flat.reshape(
-                    (1, len(non_controllable_loads_flat))
-                )
+        price_start_date = list(price_profile.keys())[0]
+        power_limit_start_date = list(power_limit.keys())[0]
+        non_controllable_loads_start_date = datetime.fromisoformat(
+            list(non_controllable_loads["forecast"].keys())[0]
+        )
 
-                # Compute price profile
-                price_profile_flat = np.array(list(price_profile.values()))[
-                    0:steps_horizon_k
-                ]
-                price_profile_array = price_profile_flat.reshape(
-                    (1, len(price_profile_flat))
-                )
+        if (
+            price_start_date != power_limit_start_date
+            or price_start_date != non_controllable_loads_start_date
+        ):
+            logger.warning(
+                "Start dates of inputs do not match: price=%s, power_limit=%s, "
+                "non_controllable_loads=%s. Proceeding with available data.",
+                price_start_date, power_limit_start_date,
+                non_controllable_loads_start_date,
+            )
+        else:
+            logger.debug("Start dates of inputs match.")
 
-                # Compute power limit
-                power_limit_flat = np.array(list(power_limit.values()))[
-                    0:steps_horizon_k
-                ]
-                power_limit_array = power_limit_flat.reshape((1, len(power_limit_flat)))
+        # Compute non controllable loads — API returns W, convert to kW
+        non_controllable_loads_flat = np.array(
+            list(non_controllable_loads["forecast"].values())
+        )[0:common_length] / 1000
+        non_controllable_loads_array = non_controllable_loads_flat.reshape(
+            (1, len(non_controllable_loads_flat))
+        )
+
+        # Compute price profile
+        price_profile_flat = np.array(list(price_profile.values()))[
+            0:common_length
+        ]
+        price_profile_array = price_profile_flat.reshape(
+            (1, len(price_profile_flat))
+        )
+
+        # Compute power limit
+        power_limit_flat = np.array(list(power_limit.values()))[
+            0:common_length
+        ]
+        power_limit_array = power_limit_flat.reshape((1, len(power_limit_flat)))
 
         return price_profile_array, power_limit_array, non_controllable_loads_array
 

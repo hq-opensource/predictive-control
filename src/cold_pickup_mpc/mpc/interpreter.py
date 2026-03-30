@@ -150,11 +150,12 @@ class Interpreter:
                 results_electric_vehicle, control_electric_vehicle = (
                     self.load_electric_vehicle_variables(global_mpc_problem, devices)
                 )
-            # Convert to Watts for the entire pipeline
+            # Convert results to Watts for InfluxDB storage
             if "power" in results_electric_vehicle.columns:
                 results_electric_vehicle["power"] *= 1000
-                if control_electric_vehicle is not None and not control_electric_vehicle.empty:
-                    control_electric_vehicle *= 1000
+            # Convert controls to Watts (independent of results conversion)
+            if control_electric_vehicle is not None and not control_electric_vehicle.empty:
+                control_electric_vehicle = control_electric_vehicle * 1000
 
             # Create control
             controls = pd.concat([controls, control_electric_vehicle], axis=1)
@@ -179,12 +180,13 @@ class Interpreter:
                 results_electric_storage, control_electric_storage = (
                     self.load_electric_storage_variables(global_mpc_problem, devices)
                 )
-            # Convert to Watts for the entire pipeline
+            # Convert results to Watts for InfluxDB storage
             for col in ["power", "charge_power", "discharge_power"]:
                 if col in results_electric_storage.columns:
                     results_electric_storage[col] *= 1000
+            # Convert controls to Watts (independent of results conversion)
             if control_electric_storage is not None and not control_electric_storage.empty:
-                control_electric_storage *= 1000
+                control_electric_storage = control_electric_storage * 1000
 
             # Create control
             controls = pd.concat([controls, control_electric_storage], axis=1)
@@ -210,11 +212,12 @@ class Interpreter:
                 results_water_heater, control_water_heater = (
                     self.load_water_heater_variables(global_mpc_problem, devices)
                 )
-            # Convert to Watts for the entire pipeline
+            # Convert results to Watts for InfluxDB storage
             if "power" in results_water_heater.columns:
                 results_water_heater["power"] *= 1000
-                if control_water_heater is not None and not control_water_heater.empty:
-                    control_water_heater *= 1000
+            # Convert controls to Watts (independent of results conversion)
+            if control_water_heater is not None and not control_water_heater.empty:
+                control_water_heater = control_water_heater * 1000
 
             # Create control
             controls = pd.concat([controls, control_water_heater], axis=1)
@@ -397,7 +400,7 @@ class Interpreter:
         )
         results_water_heater = pd.concat([wh_power_df, wh_temperature_df], axis=1)
         control_water_heater = pd.DataFrame(
-            data=results_water_heater[wh_power].values,
+            data=results_water_heater[wh_power].values.copy(),
             columns=column_entity_id,
             index=date_range,
         )
@@ -486,7 +489,7 @@ class Interpreter:
             target_key="entity_id",
         )
         control_electric_vehicle = pd.DataFrame(
-            data=results_electric_vehicle[charge_power].values,
+            data=results_electric_vehicle[charge_power].values.copy(),
             columns=column_entity_id,
             index=date_range,
         )
@@ -593,7 +596,7 @@ class Interpreter:
             target_key="entity_id",
         )
         control_electric_storage = pd.DataFrame(
-            data=results_electric_storage[battery_power].values,
+            data=results_electric_storage[battery_power].values.copy(),
             columns=column_entity_id,
             index=date_range,
         )
