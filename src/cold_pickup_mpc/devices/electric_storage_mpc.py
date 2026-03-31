@@ -140,9 +140,21 @@ class ElectricStorageMPC(DeviceMPC):
         # Define optimization constraints
         constraints: List = []
 
-        # Maxium and minimum residual energy of the battery ()
-        constraints.append(residual_energy <= max_residual_energy)
-        constraints.append(residual_energy >= min_residual_energy)
+        # Slack variables for soft SoC bounds — guarantee feasibility when the
+        # initial state is outside [min, max] without weakening the bounds for
+        # the rest of the horizon.  The 1000× penalty makes voluntary violations
+        # economically irrational relative to realistic energy prices.
+        slack_above = cvx.Variable(
+            (1, steps_horizon_k + 1), nonneg=True, name="electric_storage_slack_above"
+        )
+        slack_below = cvx.Variable(
+            (1, steps_horizon_k + 1), nonneg=True, name="electric_storage_slack_below"
+        )
+        objective[0] = objective[0] + 1000 * cvx.sum(slack_above + slack_below)
+
+        # Soft SoC bounds
+        constraints.append(residual_energy <= max_residual_energy + slack_above)
+        constraints.append(residual_energy >= min_residual_energy - slack_below)
 
         # Initial and final state of the battery
         constraints.append(residual_energy[0, 0] == initial_state)
@@ -232,12 +244,12 @@ class ElectricStorageMPC(DeviceMPC):
             max_residual_energy = energy_capacity
         if initial_state < min_residual_energy:
             logger.warning(
-                "Initial state of charge of the battery %s kWh is less than minimum residual energy %s kWh.",
+                "Initial state of charge of the battery %s kWh is less than minimum residual energy %s kWh. "
+                "The soft constraint will absorb the initial violation; the optimizer "
+                "will charge from the next step onward to restore the floor.",
                 initial_state,
                 min_residual_energy,
             )
-            logger.warning("Setting min_residual_energy of the battery to zero.")
-            min_residual_energy = initial_state
         electric_storage_arrays["min_residual_energy"] = min_residual_energy
         electric_storage_arrays["max_residual_energy"] = max_residual_energy
 

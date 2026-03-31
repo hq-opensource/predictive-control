@@ -45,7 +45,7 @@ class ElectricStorageDataRetriever(DeviceRetriever):
             "modulation_capability": {"type": bool, "default": True},
             "discharge_capability": {"type": bool, "default": True},
             "discharge_action": {"type": float, "default": -4.5},
-            "final_soc_requirement": {"type": float, "default": 50.0},
+            "final_soc_requirement": {"type": float, "default": 65.0},
             "energy_capacity": {"type": float, "default": 15.0},
             "charging_efficiency": {"type": float, "default": 0.98},
             "discharging_efficiency": {"type": float, "default": 0.98},

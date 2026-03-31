@@ -176,20 +176,24 @@ class ElectricVehicleV1GMPC(DeviceMPC):
                     switch[k] - switch[k + 1] <= self._max_power_ramp_rate
                 )
 
-        # State constraints
-        constraints.append(
-            residual_energy <= max_residual_energy / 100 * self._energy_capacity
+        # Slack variables for soft SoC bounds — guarantee feasibility when the
+        # initial state is outside [min, max] without weakening the bounds for
+        # the rest of the horizon.  The 1000× penalty makes voluntary violations
+        # economically irrational relative to realistic energy prices.
+        max_residual_energy_kwh = max_residual_energy / 100 * self._energy_capacity
+        min_residual_energy_kwh = min_residual_energy / 100 * self._energy_capacity
+        slack_above = cvx.Variable(
+            (1, steps_horizon_k + 1), nonneg=True, name="electric_vehicle_slack_above"
         )
-        
-        # Soft penalty for the minimum residual energy to avoid infeasibility
-        # when native decay drives the SoC below the limit and charging is impossible.
-        min_target_kwh = min_residual_energy / 100 * self._energy_capacity
-        penalty_for_constraint_violation = 10
-        min_soc_penalty = priority * penalty_for_constraint_violation * cvx.sum_squares(
-            cvx.pos(min_target_kwh - residual_energy) / norm_factor
+        slack_below = cvx.Variable(
+            (1, steps_horizon_k + 1), nonneg=True, name="electric_vehicle_slack_below"
         )
-        objective.append(min_soc_penalty)
-        
+        objective.append(1000 * cvx.sum(slack_above + slack_below))
+
+        # Soft SoC bounds
+        constraints.append(residual_energy <= max_residual_energy_kwh + slack_above)
+        constraints.append(residual_energy >= min_residual_energy_kwh - slack_below)
+
         constraints.append(residual_energy[0, 0] == initial_state)
 
         # Log maximum theoretically reachable SoC at end of horizon
@@ -306,16 +310,17 @@ class ElectricVehicleV1GMPC(DeviceMPC):
 
         if initial_soc > max_residual_energy:
             logger.warning(
-                "Initial SoC of EV %s (%s%%) is greater than max_residual_energy (%s%%). Adjusting max.",
+                "Initial SoC of EV %s (%s%%) is greater than max_residual_energy (%s%%). "
+                "The soft constraint will absorb the initial violation.",
                 entity_id, initial_soc, max_residual_energy
             )
-            max_residual_energy = initial_soc
         if initial_soc < min_residual_energy:
             logger.warning(
-                "Initial SoC of EV %s (%s%%) is less than min_residual_energy (%s%%). Adjusting min to slightly below initial.",
+                "Initial SoC of EV %s (%s%%) is less than min_residual_energy (%s%%). "
+                "The soft constraint will absorb the initial violation; the optimizer "
+                "will charge from the next step onward to restore the floor.",
                 entity_id, initial_soc, min_residual_energy
             )
-            min_residual_energy = max(0, initial_soc - 0.1) # Slack for feasibility
         
         v1g_arrays["min_residual_energy"] = min_residual_energy
         v1g_arrays["max_residual_energy"] = max_residual_energy

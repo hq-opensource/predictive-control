@@ -336,30 +336,30 @@ class WaterHeaterMPC(DeviceMPC):
             ]
         )  # Wh/°C/Litre
 
-        # Add dynamic constraints for the water heater veryfing against the inital state
+        # Validate initial state against temperature bounds — log warnings but
+        # do NOT weaken the bounds.  The soft constraints (slack variables with
+        # 1000× penalty in the formulation) absorb the initial violation and
+        # drive the optimizer to recover as fast as possible.
         if (
             water_heater_arrays["initial_state"]
             < water_heater_arrays["min_temperature"]
         ):
-            logger.error(
-                "Initial state %s is lower than the minimum temperature %s",
+            logger.warning(
+                "Initial state %.1f°C is lower than the minimum temperature %.1f°C. "
+                "The soft constraint will absorb the initial violation; the optimizer "
+                "will heat from the next step onward to restore the floor.",
                 water_heater_arrays["initial_state"],
                 water_heater_arrays["min_temperature"],
-            )
-            water_heater_arrays["min_temperature"] = (
-                0  # Set to 0 to avoid violating constraints
             )
         if (
             water_heater_arrays["initial_state"]
             > water_heater_arrays["max_temperature"]
         ):
-            logger.error(
-                "Initial state %s is higher than the maximum temperature %s",
+            logger.warning(
+                "Initial state %.1f°C is higher than the maximum temperature %.1f°C. "
+                "The soft constraint will absorb the initial violation.",
                 water_heater_arrays["initial_state"],
                 water_heater_arrays["max_temperature"],
-            )
-            water_heater_arrays["max_temperature"] = (
-                100  # Set to 100°C to avoid violating constraints
             )
 
         return water_heater_arrays
