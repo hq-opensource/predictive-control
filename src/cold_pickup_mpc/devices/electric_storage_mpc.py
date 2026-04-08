@@ -156,9 +156,17 @@ class ElectricStorageMPC(DeviceMPC):
         constraints.append(residual_energy <= max_residual_energy + slack_above)
         constraints.append(residual_energy >= min_residual_energy - slack_below)
 
-        # Initial and final state of the battery
+        # Initial state of the battery
         constraints.append(residual_energy[0, 0] == initial_state)
-        constraints.append(residual_energy[0, -1] >= final_soc_requirement)
+
+        # Final SoC requirement as a soft penalty in the objective (instead of a
+        # hard constraint).  This prevents infeasibility when the target is
+        # physically unreachable given the current initial SoC, power capacity,
+        # competing device demands, and horizon length.
+        final_soc_penalty = priority * cvx.square(
+            cvx.pos(final_soc_requirement - residual_energy[0, -1]) / norm_factor
+        )
+        objective[0] = objective[0] + final_soc_penalty
 
         # Maximum charge and discharge per time step
         constraints.append(charge_power <= power_capacity)
