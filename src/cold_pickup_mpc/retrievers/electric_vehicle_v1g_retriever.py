@@ -81,11 +81,22 @@ class ElectricVehicleV1gDataRetriever(DeviceRetriever):
             entity_id = device.get("entity_id", "unknown")
 
             # Build dictionary of initial states.
-            # Use the dedicated EV SoC endpoint, which reads from InfluxDB
-            # (v1g_state_of_charge measurement). This is more reliable than the
-            # generic /devices/state endpoint, which reads from the Redis real-time
-            # state and may return stale or uncalibrated Modbus register values.
-            initial_state[entity_id] = get_ev_soc_current(entity_id)
+            # If an override is configured in devices.yaml, use it instead of
+            # querying the API.  This is useful for testing scenarios where the
+            # real SoC reading is unavailable or we want a controlled starting point.
+            soc_override = device.get("initial_soc_override")
+            if soc_override is not None:
+                initial_state[entity_id] = float(soc_override)
+                logger.info(
+                    "EV %s: using initial_soc_override=%.1f%% from devices.yaml",
+                    entity_id, float(soc_override),
+                )
+            else:
+                # Use the dedicated EV SoC endpoint, which reads from InfluxDB
+                # (v1g_state_of_charge measurement). This is more reliable than the
+                # generic /devices/state endpoint, which reads from the Redis real-time
+                # state and may return stale or uncalibrated Modbus register values.
+                initial_state[entity_id] = get_ev_soc_current(entity_id)
 
             # Build dictionary of setpoint preferences
             soc_preferences[entity_id] = get_preferences_data(

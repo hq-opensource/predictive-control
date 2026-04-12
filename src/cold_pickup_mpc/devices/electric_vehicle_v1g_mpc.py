@@ -148,12 +148,19 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         norm_factor = float(
             self.device_dict.get("norm_factor", self._energy_capacity)
         )  # The use of residual energy allows to use capacity as normalization factor
+        
         desired_state_kwh = (
             float(self.device_dict.get("desired_state") or 90)
             / 100
             * self._energy_capacity
         )
         desired_state = desired_state_kwh * np.ones((1, steps_horizon_k))
+        logger.info(
+            "EV %s: per-step comfort norm_factor=%.1f, priority=%.1f, desired_state=%.1f kWh (%.1f%%)",
+            self.device_dict.get("entity_id", "unknown"),
+            norm_factor, priority, desired_state_kwh,
+            desired_state_kwh / self._energy_capacity * 100,
+        )
         comfort_term = priority * cvx.sum_squares(
             (desired_state - residual_energy[:, :-1]) / norm_factor
         )
@@ -219,14 +226,26 @@ class ElectricVehicleV1GMPC(DeviceMPC):
         # Final SoC requirement as a soft penalty in the objective (instead of a hard constraint).
         # This prevents infeasibility when the target is physically unreachable given the
         # current initial SoC, charger power, and horizon length.
+        # A separate final_soc_norm_factor allows decoupling the final SoC penalty
+        # from the per-step comfort term, enabling price-responsive charging (large
+        # norm_factor) while still motivating the optimizer to reach the target SoC
+        # by end of horizon (smaller final_soc_norm_factor).
         if "final_soc_requirement" in self.device_dict:
             final_soc_target_kwh = (
                 float(self.device_dict["final_soc_requirement"])
                 / 100
                 * self._energy_capacity
             )
+            final_soc_nf = float(
+                self.device_dict.get("final_soc_norm_factor", norm_factor)
+            )
+            logger.info(
+                "EV %s: final SoC penalty norm_factor=%.1f, target=%.1f kWh (%.1f%%)",
+                entity_id, final_soc_nf, final_soc_target_kwh,
+                final_soc_target_kwh / self._energy_capacity * 100,
+            )
             final_soc_penalty = priority * cvx.square(
-                cvx.pos(final_soc_target_kwh - residual_energy[0, -1]) / norm_factor
+                cvx.pos(final_soc_target_kwh - residual_energy[0, -1]) / final_soc_nf
             )
             objective.append(final_soc_penalty)
 

@@ -47,7 +47,7 @@ class SpaceHeatingMPC(DeviceMPC):
         stop: datetime,
         steps_horizon_k: int,
         interval: int = 10,
-        norm_factor: int = 10,  # Default 10°C (max_setpoint - min_setpoint)
+        norm_factor: float = 1.5,  # Calibrated via sweep: strongest tracking without peak heating
     ) -> Tuple[List, List, cvx.Variable]:
         """Creates the optimization formulation for the space heating system.
 
@@ -123,8 +123,16 @@ class SpaceHeatingMPC(DeviceMPC):
             name="smart_thermostats_u_heaters",
         )
 
-        # Define weights
-        weights = priorities * occupancy
+        # Define weights — occupancy only (no priority multiplication).
+        # Removing priority keeps all zones on the same scale and makes it
+        # easier to balance the comfort term against the energy-cost term.
+        weights = occupancy
+
+        # Comfort weight calibrated via sensitivity sweep (see report Chapter 3,
+        # Table 3.1). w_c=0.2 achieves 84% peak reduction while maintaining
+        # comfort tracking within 1°C of the preference during off-peak.
+        norm_factor = 1.5  # Calibrated via sweep: strongest tracking without peak heating
+        comfort_weight = 0.2
 
         # Slack variables for soft comfort constraints (always non-negative)
         slack_above = cvx.Variable(
@@ -139,18 +147,15 @@ class SpaceHeatingMPC(DeviceMPC):
         )
 
         # Define optimization objective
+        # Quadratic comfort penalty only — the max term was removed because it
+        # created an excessively strong floor that prevented the optimizer from
+        # curtailing heating even during peak pricing (see report Chapter 3).
         # The 1000× penalty on slack ensures comfort bounds are violated only when
         # the thermal dynamics make a feasible trajectory impossible (e.g. bad model).
         objective = [
-            cvx.sum(
+            comfort_weight * cvx.sum(
                 cvx.multiply(
                     ((setpoint_preferences - x_temperature) / norm_factor) ** 2, weights
-                )
-            )
-            + 100
-            * cvx.max(
-                cvx.multiply(
-                    cvx.abs(setpoint_preferences - x_temperature) / norm_factor, weights
                 )
             )
             + 1000 * cvx.sum(slack_above + slack_below)
